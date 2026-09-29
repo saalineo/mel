@@ -1,0 +1,13 @@
+[package]
+name = "mel-bus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+mel-core.workspace = true
+mel-memory.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+tracing.workspace = true
