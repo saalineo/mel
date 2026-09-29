@@ -41,6 +41,18 @@ impl Riscv64Cpu {
         })
     }
 
+    /// Create a new RISC-V 64-bit CPU instance connected to a system bus.
+    pub fn with_bus(bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>) -> Result<Self, MelError> {
+        let mut cpu = Self::new()?;
+        cpu.attach_bus(bus)?;
+        Ok(cpu)
+    }
+
+    /// Attach a system bus and register MMIO memory hooks.
+    pub fn attach_bus(&mut self, bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>) -> Result<(), MelError> {
+        crate::hook::register_bus_hooks(&mut self.uc, bus)
+    }
+
     /// Map a memory region directly into the Unicorn emulator.
     pub fn mem_map(&mut self, addr: u64, size: u64, perms: Prot) -> Result<(), MelError> {
         self.uc

@@ -13,3 +13,7 @@ serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 unicorn-engine.workspace = true
+
+[dev-dependencies]
+mel-devices.workspace = true
+mel-memory.workspace = true
