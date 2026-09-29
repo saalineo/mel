@@ -8,6 +8,10 @@ authors.workspace = true
 [dependencies]
 mel-core.workspace = true
 mel-memory.workspace = true
+mel-vm.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+mel-cpu.workspace = true
