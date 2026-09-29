@@ -2,6 +2,7 @@
 //!
 //! Interactive REPL, disassembly, breakpoints, memory inspection, and register inspection.
 
-pub use mel_core::{Address, MelError, MelResult};
+pub mod disasm;
 
-pub struct Debugger;
+pub use disasm::{create_disassembler, disassemble, DisassembledInstruction};
+pub use mel_core::{Address, Architecture, MelError, MelResult};
