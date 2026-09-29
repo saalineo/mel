@@ -1,11 +1,13 @@
 //! # MEL CPU
 //!
-//! CPU backend abstractions and emulation engine bridges.
+//! Universal CPU backend abstractions, execution step types, and emulator engine bridges.
 
-pub use mel_core::{Architecture, CpuError, MelError, MelResult};
+pub mod mock;
+pub mod traits;
 
-pub trait CpuBackend: Send + Sync {
-    fn arch(&self) -> Architecture;
-    fn reset(&mut self) -> Result<(), MelError>;
-    fn pc(&self) -> Result<u64, MelError>;
-}
+pub use mock::MockCpu;
+pub use traits::{CpuBackend, CpuStepResult};
+
+pub use mel_core::{
+    Address, Architecture, CpuError, MelError, MelResult, RegisterId, RegisterValue,
+};
