@@ -338,6 +338,14 @@ impl CpuBackend for Riscv64Cpu {
         self.cycles_executed = state.cycles;
         Ok(())
     }
+
+    fn mem_write(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MelError> {
+        self.mem_write(addr, bytes)
+    }
+
+    fn mem_read(&self, addr: u64, bytes: &mut [u8]) -> Result<(), MelError> {
+        self.mem_read(addr, bytes)
+    }
 }
 
 #[cfg(test)]

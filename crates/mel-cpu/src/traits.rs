@@ -51,4 +51,15 @@ pub trait CpuBackend: Send + Sync {
     fn load_state(&mut self, _data: &[u8]) -> Result<(), MelError> {
         Ok(())
     }
+
+    /// Write raw memory to CPU address space if supported by backend.
+    fn mem_write(&mut self, _addr: u64, _bytes: &[u8]) -> Result<(), MelError> {
+        Ok(())
+    }
+
+    /// Read raw memory from CPU address space if supported by backend.
+    fn mem_read(&self, _addr: u64, _bytes: &mut [u8]) -> Result<(), MelError> {
+        Ok(())
+    }
 }
+
