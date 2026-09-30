@@ -304,6 +304,9 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     let mut cpu = Riscv64Cpu::with_bus(bus_arc.clone())?;
     cpu.mem_map(0x8000_0000, ram_size as u64, Prot::ALL)?;
     cpu.mem_map(0x0000_1000, 0x1000, Prot::ALL)?;
+    if let Ok(r) = rom.lock() {
+        cpu.mem_write(0x0000_1000, r.as_slice())?;
+    }
     cpu.set_pc(0x8000_0000)?;
 
     let devices: Vec<Arc<Mutex<dyn MmioDevice>>> = vec![rom.clone(), uart.clone()];

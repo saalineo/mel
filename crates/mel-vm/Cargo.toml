@@ -19,4 +19,6 @@ unicorn-engine.workspace = true
 
 [dev-dependencies]
 mel-loader.workspace = true
+mel-debugger.workspace = true
+
 
