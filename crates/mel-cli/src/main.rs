@@ -1,7 +1,11 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "mel", version, about = "MEL — Serious Systems-Engineering Simulation")]
+#[command(
+    name = "mel",
+    version,
+    about = "MEL — Serious Systems-Engineering Simulation"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -33,7 +37,10 @@ fn main() -> anyhow::Result<()> {
             println!("Supported architectures: riscv64, arm64, x86_64, powerpc64");
         }
         Commands::Run { file, arch } => {
-            println!("Starting simulation for '{}' on [{}] architecture...", file, arch);
+            println!(
+                "Starting simulation for '{}' on [{}] architecture...",
+                file, arch
+            );
         }
     }
 

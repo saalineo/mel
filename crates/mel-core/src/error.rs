@@ -1,7 +1,7 @@
 //! Error types for the MEL simulation ecosystem.
 
-use thiserror::Error;
 use crate::types::Address;
+use thiserror::Error;
 
 /// Main error type for MEL operations.
 #[derive(Debug, Error)]
@@ -16,10 +16,7 @@ pub enum MelError {
     Memory(#[from] MemoryError),
 
     #[error("Device error [{device}]: {message}")]
-    Device {
-        device: String,
-        message: String,
-    },
+    Device { device: String, message: String },
 
     #[error("Loader error: {0}")]
     Loader(String),

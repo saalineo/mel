@@ -1,7 +1,7 @@
 //! Dummy / loopback peripheral for testing bus and MMIO routing.
 
-use mel_core::MelError;
 use crate::device_trait::MmioDevice;
+use mel_core::MelError;
 use serde::{Deserialize, Serialize};
 
 /// A simple 4-register MMIO device for testing read, write, reset, and state serialization.

@@ -1,8 +1,8 @@
 //! Raw flat binary payload loader.
 
-use std::path::Path;
 use mel_core::MelError;
 use mel_vm::VirtualMachine;
+use std::path::Path;
 
 /// Load a raw binary payload into VM memory and update the CPU program counter.
 pub fn load_raw_binary(
@@ -14,15 +14,13 @@ pub fn load_raw_binary(
         return Ok(());
     }
 
-    let end_addr = target_addr
-        .checked_add(data.len() as u64)
-        .ok_or_else(|| {
-            MelError::Loader(format!(
-                "Payload size {} at target address {:#x} overflows address space",
-                data.len(),
-                target_addr
-            ))
-        })?;
+    let end_addr = target_addr.checked_add(data.len() as u64).ok_or_else(|| {
+        MelError::Loader(format!(
+            "Payload size {} at target address {:#x} overflows address space",
+            data.len(),
+            target_addr
+        ))
+    })?;
 
     // Write payload into memory and point program counter at entry address
     vm.write_memory(target_addr, data)?;
@@ -85,9 +83,7 @@ mod tests {
         let mut vm = create_basic_riscv64_vm().unwrap();
         // lui x1, 0x10000 -> addi x2, x0, 89 ('Y') -> sb x2, 0(x1)
         let payload: [u8; 12] = [
-            0xb7, 0x00, 0x00, 0x10,
-            0x13, 0x01, 0x90, 0x05,
-            0x23, 0x80, 0x20, 0x00,
+            0xb7, 0x00, 0x00, 0x10, 0x13, 0x01, 0x90, 0x05, 0x23, 0x80, 0x20, 0x00,
         ];
         let entry_point = 0x8000_0000;
 

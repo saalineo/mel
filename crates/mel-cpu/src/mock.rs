@@ -1,9 +1,9 @@
 //! Mock CPU implementation for testing backend abstraction and compliance.
 
-use std::collections::{HashMap, HashSet};
+use crate::traits::{CpuBackend, CpuStepResult};
 use mel_core::{Architecture, CpuError, MelError, RegisterId};
 use serde::{Deserialize, Serialize};
-use crate::traits::{CpuBackend, CpuStepResult};
+use std::collections::{HashMap, HashSet};
 
 /// In-memory mock CPU backend for unit testing and validation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,6 +182,9 @@ mod tests {
         restored.load_state(&snapshot).unwrap();
 
         assert_eq!(restored.pc().unwrap(), 0x8000_0004);
-        assert_eq!(restored.read_register(RegisterId::named("t0")).unwrap(), 0x1234);
+        assert_eq!(
+            restored.read_register(RegisterId::named("t0")).unwrap(),
+            0x1234
+        );
     }
 }

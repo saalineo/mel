@@ -1,9 +1,9 @@
 //! Physical System Bus implementation with address decoding and MMIO routing.
 
-use std::sync::{Arc, Mutex};
+use crate::device::BusDevice;
 use mel_core::{Address, BusError, Endianness, MelError, MelResult, Size};
 use mel_memory::Ram;
-use crate::device::BusDevice;
+use std::sync::{Arc, Mutex};
 
 /// Represents an active mapped region on the system bus.
 pub enum MappedTarget {
@@ -56,7 +56,12 @@ impl SystemBus {
     }
 
     /// Map a RAM buffer at the specified base address.
-    pub fn map_ram(&mut self, name: impl Into<String>, base: Address, ram: Arc<Mutex<Ram>>) -> MelResult<()> {
+    pub fn map_ram(
+        &mut self,
+        name: impl Into<String>,
+        base: Address,
+        ram: Arc<Mutex<Ram>>,
+    ) -> MelResult<()> {
         let size = ram.lock().expect("bus RAM lock poisoned").size() as u64;
         self.check_overlap(base, size)?;
         self.entries.push(BusEntry {
@@ -117,15 +122,23 @@ impl SystemBus {
 
     /// Read an integer of 1, 2, 4, or 8 bytes from the system bus.
     pub fn read(&self, addr: Address, size: usize, endianness: Endianness) -> MelResult<u64> {
-        let entry = self.find_entry(addr).ok_or(BusError::UnmappedAddress { addr, size })?;
+        let entry = self
+            .find_entry(addr)
+            .ok_or(BusError::UnmappedAddress { addr, size })?;
         let offset = (addr - entry.base) as usize;
         match &entry.target {
             MappedTarget::Ram(ram_lock) => {
                 let ram = ram_lock.lock().expect("bus RAM lock poisoned");
                 match size {
                     1 => ram.read_u8(offset).map(u64::from).map_err(MelError::Memory),
-                    2 => ram.read_u16(offset, endianness).map(u64::from).map_err(MelError::Memory),
-                    4 => ram.read_u32(offset, endianness).map(u64::from).map_err(MelError::Memory),
+                    2 => ram
+                        .read_u16(offset, endianness)
+                        .map(u64::from)
+                        .map_err(MelError::Memory),
+                    4 => ram
+                        .read_u32(offset, endianness)
+                        .map(u64::from)
+                        .map_err(MelError::Memory),
                     8 => ram.read_u64(offset, endianness).map_err(MelError::Memory),
                     _ => Err(MelError::Bus(BusError::UnmappedAddress { addr, size })),
                 }
@@ -138,17 +151,31 @@ impl SystemBus {
     }
 
     /// Write an integer of 1, 2, 4, or 8 bytes to the system bus.
-    pub fn write(&mut self, addr: Address, val: u64, size: usize, endianness: Endianness) -> MelResult<()> {
-        let entry = self.find_entry(addr).ok_or(BusError::UnmappedAddress { addr, size })?;
+    pub fn write(
+        &mut self,
+        addr: Address,
+        val: u64,
+        size: usize,
+        endianness: Endianness,
+    ) -> MelResult<()> {
+        let entry = self
+            .find_entry(addr)
+            .ok_or(BusError::UnmappedAddress { addr, size })?;
         let offset = (addr - entry.base) as usize;
         match &entry.target {
             MappedTarget::Ram(ram_lock) => {
                 let mut ram = ram_lock.lock().expect("bus RAM lock poisoned");
                 match size {
                     1 => ram.write_u8(offset, val as u8).map_err(MelError::Memory),
-                    2 => ram.write_u16(offset, val as u16, endianness).map_err(MelError::Memory),
-                    4 => ram.write_u32(offset, val as u32, endianness).map_err(MelError::Memory),
-                    8 => ram.write_u64(offset, val, endianness).map_err(MelError::Memory),
+                    2 => ram
+                        .write_u16(offset, val as u16, endianness)
+                        .map_err(MelError::Memory),
+                    4 => ram
+                        .write_u32(offset, val as u32, endianness)
+                        .map_err(MelError::Memory),
+                    8 => ram
+                        .write_u64(offset, val, endianness)
+                        .map_err(MelError::Memory),
                     _ => Err(MelError::Bus(BusError::UnmappedAddress { addr, size })),
                 }
             }
@@ -220,8 +247,12 @@ mod tests {
         let uart = Arc::new(Mutex::new(MockUart { last_val: 0 }));
         bus.map_device("UART", 0x1000_0000, 0x100, uart).unwrap();
 
-        bus.write(0x8000_0000, 0x12345678, 4, Endianness::Little).unwrap();
-        assert_eq!(bus.read(0x8000_0000, 4, Endianness::Little).unwrap(), 0x12345678);
+        bus.write(0x8000_0000, 0x12345678, 4, Endianness::Little)
+            .unwrap();
+        assert_eq!(
+            bus.read(0x8000_0000, 4, Endianness::Little).unwrap(),
+            0x12345678
+        );
 
         bus.write_u8(0x1000_0000, 0x42).unwrap();
         assert_eq!(bus.read_u8(0x1000_0000).unwrap(), 0x42);

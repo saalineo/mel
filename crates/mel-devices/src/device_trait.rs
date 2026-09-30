@@ -1,8 +1,8 @@
 //! Core MMIO device trait and lifecycle management.
 
-use std::sync::{Arc, Mutex};
 use mel_bus::BusDevice;
 use mel_core::MelError;
+use std::sync::{Arc, Mutex};
 
 /// Universal trait implemented by all memory-mapped peripherals in MEL.
 pub trait MmioDevice: Send + Sync {
@@ -63,10 +63,16 @@ impl BusDevice for SharedMmioBusAdapter {
     }
 
     fn read(&mut self, offset: u64, size: usize) -> Result<u64, MelError> {
-        self.0.lock().expect("MMIO device lock poisoned").read(offset, size)
+        self.0
+            .lock()
+            .expect("MMIO device lock poisoned")
+            .read(offset, size)
     }
 
     fn write(&mut self, offset: u64, value: u64, size: usize) -> Result<(), MelError> {
-        self.0.lock().expect("MMIO device lock poisoned").write(offset, value, size)
+        self.0
+            .lock()
+            .expect("MMIO device lock poisoned")
+            .write(offset, value, size)
     }
 }

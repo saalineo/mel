@@ -1,10 +1,10 @@
 //! Supported CPU architecture definitions and defaults for MEL.
 
+use crate::error::MelError;
+use crate::types::{Address, Endianness};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
-use crate::error::MelError;
-use crate::types::{Address, Endianness};
 
 /// The four officially supported CPU architectures in MEL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -65,12 +65,7 @@ impl Architecture {
     }
 
     /// List of all 4 architectures.
-    pub const ALL: [Self; 4] = [
-        Self::Riscv64,
-        Self::Arm64,
-        Self::X86_64,
-        Self::PowerIso64,
-    ];
+    pub const ALL: [Self; 4] = [Self::Riscv64, Self::Arm64, Self::X86_64, Self::PowerIso64];
 }
 
 impl fmt::Display for Architecture {
@@ -99,17 +94,35 @@ mod tests {
 
     #[test]
     fn test_architecture_from_str() {
-        assert_eq!("riscv64".parse::<Architecture>().unwrap(), Architecture::Riscv64);
-        assert_eq!("aarch64".parse::<Architecture>().unwrap(), Architecture::Arm64);
-        assert_eq!("x86_64".parse::<Architecture>().unwrap(), Architecture::X86_64);
-        assert_eq!("ppc64".parse::<Architecture>().unwrap(), Architecture::PowerIso64);
+        assert_eq!(
+            "riscv64".parse::<Architecture>().unwrap(),
+            Architecture::Riscv64
+        );
+        assert_eq!(
+            "aarch64".parse::<Architecture>().unwrap(),
+            Architecture::Arm64
+        );
+        assert_eq!(
+            "x86_64".parse::<Architecture>().unwrap(),
+            Architecture::X86_64
+        );
+        assert_eq!(
+            "ppc64".parse::<Architecture>().unwrap(),
+            Architecture::PowerIso64
+        );
         assert!("mips".parse::<Architecture>().is_err());
     }
 
     #[test]
     fn test_architecture_defaults() {
-        assert_eq!(Architecture::Riscv64.default_endianness(), Endianness::Little);
-        assert_eq!(Architecture::PowerIso64.default_endianness(), Endianness::Big);
+        assert_eq!(
+            Architecture::Riscv64.default_endianness(),
+            Endianness::Little
+        );
+        assert_eq!(
+            Architecture::PowerIso64.default_endianness(),
+            Endianness::Big
+        );
         assert_eq!(Architecture::Riscv64.default_ram_base(), 0x8000_0000);
         assert_eq!(Architecture::Arm64.default_ram_base(), 0x4000_0000);
     }

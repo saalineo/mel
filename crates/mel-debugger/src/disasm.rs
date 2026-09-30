@@ -25,7 +25,10 @@ impl DisassembledInstruction {
             .join(" ");
 
         if self.operands.is_empty() {
-            format!("{:#010x}:  {:<16} {}", self.address, hex_bytes, self.mnemonic)
+            format!(
+                "{:#010x}:  {:<16} {}",
+                self.address, hex_bytes, self.mnemonic
+            )
         } else {
             format!(
                 "{:#010x}:  {:<16} {} {}",
@@ -67,7 +70,11 @@ pub fn create_disassembler(arch: Architecture) -> Result<Capstone, MelError> {
             .build(),
     };
 
-    result.map_err(|e| MelError::Debugger(format!("Failed to initialize Capstone disassembler for {arch:?}: {e}")))
+    result.map_err(|e| {
+        MelError::Debugger(format!(
+            "Failed to initialize Capstone disassembler for {arch:?}: {e}"
+        ))
+    })
 }
 
 /// Disassemble raw instruction bytes into human-readable instructions.
@@ -110,9 +117,7 @@ mod tests {
         // addi x2, x0, 88
         // sb x2, 0(x1)
         let code: [u8; 12] = [
-            0xb7, 0x00, 0x00, 0x10,
-            0x13, 0x01, 0x80, 0x05,
-            0x23, 0x80, 0x20, 0x00,
+            0xb7, 0x00, 0x00, 0x10, 0x13, 0x01, 0x80, 0x05, 0x23, 0x80, 0x20, 0x00,
         ];
 
         let instructions = disassemble(Architecture::Riscv64, &code, 0x8000_0000).unwrap();

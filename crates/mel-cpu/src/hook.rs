@@ -1,8 +1,8 @@
 //! CPU-Bus memory and MMIO hook bridge.
 
-use std::sync::{Arc, Mutex};
 use mel_bus::SystemBus;
 use mel_core::{Endianness, MelError};
+use std::sync::{Arc, Mutex};
 use unicorn_engine::unicorn_const::{HookType, Prot};
 use unicorn_engine::Unicorn;
 

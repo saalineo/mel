@@ -13,7 +13,12 @@ pub struct MemoryRegion {
 }
 
 impl MemoryRegion {
-    pub fn new(name: impl Into<String>, base: Address, size: Size, permissions: Permissions) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        base: Address,
+        size: Size,
+        permissions: Permissions,
+    ) -> Self {
         Self {
             name: name.into(),
             base,

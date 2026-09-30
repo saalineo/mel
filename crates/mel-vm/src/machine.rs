@@ -1,10 +1,10 @@
-use std::sync::{Arc, Mutex};
 use mel_bus::SystemBus;
 use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
 use mel_devices::{BootRom, MmioDevice, SharedMmioBusAdapter, Uart16550};
 use mel_memory::Ram;
+use std::sync::{Arc, Mutex};
 use unicorn_engine::unicorn_const::Prot;
 
 /// Unified virtual machine representing a complete computer motherboard.
@@ -171,7 +171,10 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     bus.map_ram("RAM", 0x8000_0000, ram.clone())?;
 
     // 2. Boot ROM (4 KB at 0x0000_1000 jumping to 0x8000_0000)
-    let rom = Arc::new(Mutex::new(BootRom::riscv64_jump_to("boot_rom", 0x8000_0000)));
+    let rom = Arc::new(Mutex::new(BootRom::riscv64_jump_to(
+        "boot_rom",
+        0x8000_0000,
+    )));
     let rom_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(rom.clone())));
     bus.map_device("BOOT_ROM", 0x0000_1000, 0x1000, rom_adapter)?;
 
@@ -268,9 +271,7 @@ mod tests {
         // addi x2, x0, 88    ('X')
         // sb x2, 0(x1)       (write to UART)
         let code: [u8; 12] = [
-            0xb7, 0x00, 0x00, 0x10,
-            0x13, 0x01, 0x80, 0x05,
-            0x23, 0x80, 0x20, 0x00,
+            0xb7, 0x00, 0x00, 0x10, 0x13, 0x01, 0x80, 0x05, 0x23, 0x80, 0x20, 0x00,
         ];
 
         vm.write_memory(0x8000_0000, &code).unwrap();
@@ -292,8 +293,12 @@ mod tests {
         let mut vm = create_mock_vm(Architecture::Arm64).unwrap();
         assert_eq!(vm.arch(), Architecture::Arm64);
 
-        vm.write_register(RegisterId::named("x0"), 0xFEEDFACE).unwrap();
-        assert_eq!(vm.read_register(RegisterId::named("x0")).unwrap(), 0xFEEDFACE);
+        vm.write_register(RegisterId::named("x0"), 0xFEEDFACE)
+            .unwrap();
+        assert_eq!(
+            vm.read_register(RegisterId::named("x0")).unwrap(),
+            0xFEEDFACE
+        );
 
         vm.step().unwrap();
         assert_eq!(vm.pc().unwrap(), 0x4000_0004);

@@ -62,4 +62,3 @@ pub trait CpuBackend: Send + Sync {
         Ok(())
     }
 }
-

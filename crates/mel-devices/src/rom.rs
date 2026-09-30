@@ -1,7 +1,7 @@
 //! Read-Only Memory (Boot ROM) MMIO device.
 
-use mel_core::{Address, Endianness, MelError, MemoryError};
 use crate::device_trait::MmioDevice;
+use mel_core::{Address, Endianness, MelError, MemoryError};
 use serde::{Deserialize, Serialize};
 
 /// Read-Only Memory peripheral storing immutable boot instructions.
@@ -71,23 +71,30 @@ impl MmioDevice for BootRom {
             2 => Endianness::Little
                 .read_u16(slice)
                 .map(u64::from)
-                .ok_or_else(|| MemoryError::OutOfBounds {
-                    addr: offset as u64,
-                    size: self.data.len(),
-                }.into()),
+                .ok_or_else(|| {
+                    MemoryError::OutOfBounds {
+                        addr: offset as u64,
+                        size: self.data.len(),
+                    }
+                    .into()
+                }),
             4 => Endianness::Little
                 .read_u32(slice)
                 .map(u64::from)
-                .ok_or_else(|| MemoryError::OutOfBounds {
+                .ok_or_else(|| {
+                    MemoryError::OutOfBounds {
+                        addr: offset as u64,
+                        size: self.data.len(),
+                    }
+                    .into()
+                }),
+            8 => Endianness::Little.read_u64(slice).ok_or_else(|| {
+                MemoryError::OutOfBounds {
                     addr: offset as u64,
                     size: self.data.len(),
-                }.into()),
-            8 => Endianness::Little
-                .read_u64(slice)
-                .ok_or_else(|| MemoryError::OutOfBounds {
-                    addr: offset as u64,
-                    size: self.data.len(),
-                }.into()),
+                }
+                .into()
+            }),
             _ => Err(MelError::Memory(MemoryError::OutOfBounds {
                 addr: offset as u64,
                 size: self.data.len(),
@@ -96,7 +103,9 @@ impl MmioDevice for BootRom {
     }
 
     fn write(&mut self, offset: u64, _value: u64, _size: usize) -> Result<(), MelError> {
-        Err(MelError::Memory(MemoryError::WriteToReadOnly { addr: offset }))
+        Err(MelError::Memory(MemoryError::WriteToReadOnly {
+            addr: offset,
+        }))
     }
 
     fn reset(&mut self) -> Result<(), MelError> {
@@ -146,7 +155,10 @@ mod tests {
     fn test_boot_rom_write_rejection() {
         let mut rom = BootRom::from_bytes("test_rom", &[0x90, 0x90]);
         let err = rom.write(0, 0x42, 1);
-        assert!(matches!(err, Err(MelError::Memory(MemoryError::WriteToReadOnly { addr: 0 }))));
+        assert!(matches!(
+            err,
+            Err(MelError::Memory(MemoryError::WriteToReadOnly { addr: 0 }))
+        ));
     }
 
     #[test]

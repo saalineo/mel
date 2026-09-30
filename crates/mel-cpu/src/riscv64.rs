@@ -1,11 +1,11 @@
 //! Unicorn-based RISC-V 64-bit CPU backend.
 
-use std::collections::HashSet;
+use crate::traits::{CpuBackend, CpuStepResult};
 use mel_core::{Architecture, CpuError, MelError, RegisterId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use unicorn_engine::unicorn_const::*;
 use unicorn_engine::{RegisterRISCV, Unicorn};
-use crate::traits::{CpuBackend, CpuStepResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Riscv64State {
@@ -42,14 +42,19 @@ impl Riscv64Cpu {
     }
 
     /// Create a new RISC-V 64-bit CPU instance connected to a system bus.
-    pub fn with_bus(bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>) -> Result<Self, MelError> {
+    pub fn with_bus(
+        bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>,
+    ) -> Result<Self, MelError> {
         let mut cpu = Self::new()?;
         cpu.attach_bus(bus)?;
         Ok(cpu)
     }
 
     /// Attach a system bus and register MMIO memory hooks.
-    pub fn attach_bus(&mut self, bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>) -> Result<(), MelError> {
+    pub fn attach_bus(
+        &mut self,
+        bus: std::sync::Arc<std::sync::Mutex<mel_bus::SystemBus>>,
+    ) -> Result<(), MelError> {
         crate::hook::register_bus_hooks(&mut self.uc, bus)
     }
 
@@ -178,7 +183,9 @@ fn register_from_index(idx: u32) -> Result<RegisterRISCV, MelError> {
         29 => Ok(RegisterRISCV::X29),
         30 => Ok(RegisterRISCV::X30),
         31 => Ok(RegisterRISCV::X31),
-        _ => Err(MelError::Cpu(CpuError::InvalidRegister(format!("index {idx}")))),
+        _ => Err(MelError::Cpu(CpuError::InvalidRegister(format!(
+            "index {idx}"
+        )))),
     }
 }
 
@@ -265,7 +272,10 @@ impl CpuBackend for Riscv64Cpu {
             return Ok(CpuStepResult::Breakpoint { pc: current_pc });
         }
 
-        match self.uc.emu_start(current_pc, u64::MAX, 0, max_cycles as usize) {
+        match self
+            .uc
+            .emu_start(current_pc, u64::MAX, 0, max_cycles as usize)
+        {
             Ok(()) => {
                 self.cycles_executed = self.cycles_executed.wrapping_add(max_cycles);
                 let next_pc = self.pc()?;
@@ -358,11 +368,19 @@ mod tests {
         assert_eq!(cpu.arch(), Architecture::Riscv64);
         assert_eq!(cpu.pc().unwrap(), 0x8000_0000);
 
-        cpu.write_register(RegisterId::named("a0"), 0x12345678).unwrap();
-        assert_eq!(cpu.read_register(RegisterId::named("x10")).unwrap(), 0x12345678);
+        cpu.write_register(RegisterId::named("a0"), 0x12345678)
+            .unwrap();
+        assert_eq!(
+            cpu.read_register(RegisterId::named("x10")).unwrap(),
+            0x12345678
+        );
 
-        cpu.write_register(RegisterId::named("ra"), 0x8000_1000).unwrap();
-        assert_eq!(cpu.read_register(RegisterId::indexed("x1", 1)).unwrap(), 0x8000_1000);
+        cpu.write_register(RegisterId::named("ra"), 0x8000_1000)
+            .unwrap();
+        assert_eq!(
+            cpu.read_register(RegisterId::indexed("x1", 1)).unwrap(),
+            0x8000_1000
+        );
 
         cpu.set_pc(0x8000_0100).unwrap();
         assert_eq!(cpu.pc().unwrap(), 0x8000_0100);
@@ -378,10 +396,7 @@ mod tests {
 
         // addi x1, x0, 42 (0x02a00093)
         // addi x2, x1, 8  (0x00808113)
-        let instructions: [u8; 8] = [
-            0x93, 0x00, 0xa0, 0x02,
-            0x13, 0x81, 0x80, 0x00,
-        ];
+        let instructions: [u8; 8] = [0x93, 0x00, 0xa0, 0x02, 0x13, 0x81, 0x80, 0x00];
         cpu.mem_write(ram_base, &instructions).unwrap();
 
         let step1 = cpu.step().unwrap();
@@ -399,7 +414,8 @@ mod tests {
     fn test_riscv64_save_restore() {
         let mut cpu = Riscv64Cpu::new().unwrap();
         cpu.set_pc(0x8000_0020).unwrap();
-        cpu.write_register(RegisterId::named("t0"), 0xDEADBEEF).unwrap();
+        cpu.write_register(RegisterId::named("t0"), 0xDEADBEEF)
+            .unwrap();
 
         let snapshot = cpu.save_state().unwrap();
 
@@ -407,6 +423,9 @@ mod tests {
         restored.load_state(&snapshot).unwrap();
 
         assert_eq!(restored.pc().unwrap(), 0x8000_0020);
-        assert_eq!(restored.read_register(RegisterId::named("t0")).unwrap(), 0xDEADBEEF);
+        assert_eq!(
+            restored.read_register(RegisterId::named("t0")).unwrap(),
+            0xDEADBEEF
+        );
     }
 }

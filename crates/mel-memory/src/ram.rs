@@ -26,10 +26,13 @@ impl Ram {
     /// Read a single byte at the given offset.
     #[inline]
     pub fn read_u8(&self, offset: usize) -> Result<u8, MemoryError> {
-        self.data.get(offset).copied().ok_or(MemoryError::OutOfBounds {
-            addr: offset as u64,
-            size: self.data.len(),
-        })
+        self.data
+            .get(offset)
+            .copied()
+            .ok_or(MemoryError::OutOfBounds {
+                addr: offset as u64,
+                size: self.data.len(),
+            })
     }
 
     /// Write a single byte at the given offset.
@@ -54,7 +57,12 @@ impl Ram {
     }
 
     /// Write a 16-bit value at the given offset.
-    pub fn write_u16(&mut self, offset: usize, val: u16, endianness: Endianness) -> Result<(), MemoryError> {
+    pub fn write_u16(
+        &mut self,
+        offset: usize,
+        val: u16,
+        endianness: Endianness,
+    ) -> Result<(), MemoryError> {
         let slice = self.get_slice_mut(offset, 2)?;
         endianness.write_u16(val, slice);
         Ok(())
@@ -70,7 +78,12 @@ impl Ram {
     }
 
     /// Write a 32-bit value at the given offset.
-    pub fn write_u32(&mut self, offset: usize, val: u32, endianness: Endianness) -> Result<(), MemoryError> {
+    pub fn write_u32(
+        &mut self,
+        offset: usize,
+        val: u32,
+        endianness: Endianness,
+    ) -> Result<(), MemoryError> {
         let slice = self.get_slice_mut(offset, 4)?;
         endianness.write_u32(val, slice);
         Ok(())
@@ -86,7 +99,12 @@ impl Ram {
     }
 
     /// Write a 64-bit value at the given offset.
-    pub fn write_u64(&mut self, offset: usize, val: u64, endianness: Endianness) -> Result<(), MemoryError> {
+    pub fn write_u64(
+        &mut self,
+        offset: usize,
+        val: u64,
+        endianness: Endianness,
+    ) -> Result<(), MemoryError> {
         let slice = self.get_slice_mut(offset, 8)?;
         endianness.write_u64(val, slice);
         Ok(())
@@ -95,13 +113,12 @@ impl Ram {
     /// Read a sub-slice of bytes.
     pub fn read_bytes(&self, offset: usize, len: usize) -> Result<&[u8], MemoryError> {
         let total_size = self.data.len();
-        let end = offset
-            .checked_add(len)
-            .filter(|&e| e <= total_size)
-            .ok_or(MemoryError::OutOfBounds {
+        let end = offset.checked_add(len).filter(|&e| e <= total_size).ok_or(
+            MemoryError::OutOfBounds {
                 addr: offset as u64,
                 size: total_size,
-            })?;
+            },
+        )?;
         Ok(&self.data[offset..end])
     }
 
@@ -114,13 +131,12 @@ impl Ram {
 
     fn get_slice_mut(&mut self, offset: usize, len: usize) -> Result<&mut [u8], MemoryError> {
         let total_size = self.data.len();
-        let end = offset
-            .checked_add(len)
-            .filter(|&e| e <= total_size)
-            .ok_or(MemoryError::OutOfBounds {
+        let end = offset.checked_add(len).filter(|&e| e <= total_size).ok_or(
+            MemoryError::OutOfBounds {
                 addr: offset as u64,
                 size: total_size,
-            })?;
+            },
+        )?;
         Ok(&mut self.data[offset..end])
     }
 
@@ -165,8 +181,12 @@ mod tests {
         ram.write_u32(4, 0xDEADBEEF, Endianness::Little).unwrap();
         assert_eq!(ram.read_u32(4, Endianness::Little).unwrap(), 0xDEADBEEF);
 
-        ram.write_u64(8, 0x0102030405060708, Endianness::Big).unwrap();
-        assert_eq!(ram.read_u64(8, Endianness::Big).unwrap(), 0x0102030405060708);
+        ram.write_u64(8, 0x0102030405060708, Endianness::Big)
+            .unwrap();
+        assert_eq!(
+            ram.read_u64(8, Endianness::Big).unwrap(),
+            0x0102030405060708
+        );
         assert_eq!(ram.read_u8(8).unwrap(), 0x01);
         assert_eq!(ram.read_u8(15).unwrap(), 0x08);
     }

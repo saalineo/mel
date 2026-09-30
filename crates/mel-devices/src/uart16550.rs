@@ -1,9 +1,9 @@
 //! 16550-compatible UART (Universal Asynchronous Receiver-Transmitter) peripheral.
 
-use std::collections::VecDeque;
-use mel_core::MelError;
 use crate::device_trait::MmioDevice;
+use mel_core::MelError;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 pub const UART_RBR: u64 = 0x00;
 pub const UART_THR: u64 = 0x00;

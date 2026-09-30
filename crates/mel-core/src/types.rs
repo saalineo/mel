@@ -37,10 +37,26 @@ pub struct Permissions {
 }
 
 impl Permissions {
-    pub const READ: Self = Self { read: true, write: false, execute: false };
-    pub const READ_WRITE: Self = Self { read: true, write: true, execute: false };
-    pub const READ_EXECUTE: Self = Self { read: true, write: false, execute: true };
-    pub const ALL: Self = Self { read: true, write: true, execute: true };
+    pub const READ: Self = Self {
+        read: true,
+        write: false,
+        execute: false,
+    };
+    pub const READ_WRITE: Self = Self {
+        read: true,
+        write: true,
+        execute: false,
+    };
+    pub const READ_EXECUTE: Self = Self {
+        read: true,
+        write: false,
+        execute: true,
+    };
+    pub const ALL: Self = Self {
+        read: true,
+        write: true,
+        execute: true,
+    };
 }
 
 /// Endianness of memory and operations.
@@ -167,6 +183,9 @@ mod tests {
         assert_eq!(Endianness::Big.read_u32(&buf).unwrap(), 0x12345678);
 
         Endianness::Little.write_u64(0x0123456789ABCDEF, &mut buf);
-        assert_eq!(Endianness::Little.read_u64(&buf).unwrap(), 0x0123456789ABCDEF);
+        assert_eq!(
+            Endianness::Little.read_u64(&buf).unwrap(),
+            0x0123456789ABCDEF
+        );
     }
 }
