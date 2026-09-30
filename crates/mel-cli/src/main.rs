@@ -1,46 +1,27 @@
-use clap::{Parser, Subcommand};
-
-#[derive(Parser, Debug)]
-#[command(
-    name = "mel",
-    version,
-    about = "MEL — Serious Systems-Engineering Simulation"
-)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Show information about available machines
-    Machine {
-        #[arg(short, long, default_value = "riscv64")]
-        arch: String,
-    },
-    /// Run a payload on the virtual machine
-    Run {
-        /// Path to binary or ELF executable
-        file: String,
-        #[arg(short, long, default_value = "riscv64")]
-        arch: String,
-    },
-}
+use clap::Parser;
+use mel_cli::{execute_debug, execute_inspect, execute_machine, execute_run, Cli, Commands};
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Machine { arch } => {
-            println!("MEL Virtual Machine Target: {}", arch);
-            println!("Supported architectures: riscv64, arm64, x86_64, powerpc64");
+    match &cli.command {
+        Commands::Run(args) => {
+            let mut stdout = std::io::stdout();
+            execute_run(args, &mut stdout)?;
         }
-        Commands::Run { file, arch } => {
-            println!(
-                "Starting simulation for '{}' on [{}] architecture...",
-                file, arch
-            );
+        Commands::Debug(args) => {
+            let stdin = std::io::stdin();
+            let stdout = std::io::stdout();
+            execute_debug(args, stdin.lock(), stdout)?;
+        }
+        Commands::Inspect(args) => {
+            let mut stdout = std::io::stdout();
+            execute_inspect(args, &mut stdout)?;
+        }
+        Commands::Machine(args) => {
+            let mut stdout = std::io::stdout();
+            execute_machine(args, &mut stdout)?;
         }
     }
 
