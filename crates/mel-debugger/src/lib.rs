@@ -5,6 +5,7 @@
 pub mod breakpoints;
 pub mod debugger;
 pub mod disasm;
+pub mod repl;
 
 pub use breakpoints::{
     Breakpoint, BreakpointCondition, BreakpointHit, BreakpointManager, DebugStopReason, Watchpoint,
@@ -13,3 +14,4 @@ pub use breakpoints::{
 pub use debugger::Debugger;
 pub use disasm::{create_disassembler, disassemble, DisassembledInstruction};
 pub use mel_core::{Address, Architecture, MelError, MelResult, RegisterId};
+pub use repl::{format_hex_dump, parse_number, ReplAction, ReplCommand, ReplOutput, ReplSession};
