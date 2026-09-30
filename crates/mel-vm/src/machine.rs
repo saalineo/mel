@@ -1,9 +1,11 @@
+use crate::snapshot::Snapshot;
 use mel_bus::SystemBus;
 use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
 use mel_devices::{BootRom, MmioDevice, SharedMmioBusAdapter, Uart16550};
 use mel_memory::Ram;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use unicorn_engine::unicorn_const::Prot;
 
@@ -153,6 +155,119 @@ impl VirtualMachine {
     /// Mutable CPU backend handle.
     pub fn cpu_mut(&mut self) -> &mut dyn CpuBackend {
         &mut *self.cpu
+    }
+
+    /// Create a complete snapshot of the virtual machine.
+    pub fn save_snapshot(&self) -> Result<Snapshot, MelError> {
+        let cpu_state = self.cpu.save_state()?;
+
+        let (ram_data, ram_base) = {
+            let ram_guard = self
+                .ram
+                .lock()
+                .map_err(|e| MelError::Cpu(mel_core::CpuError::Internal(e.to_string())))?;
+            (ram_guard.as_slice().to_vec(), self.arch.default_ram_base())
+        };
+
+        let uart_state = if let Some(uart_arc) = &self.uart {
+            if let Ok(uart_guard) = uart_arc.lock() {
+                Some(uart_guard.save_state()?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let rom_state = if let Some(rom_arc) = &self.rom {
+            if let Ok(rom_guard) = rom_arc.lock() {
+                Some(rom_guard.save_state()?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let mut devices = HashMap::new();
+        for dev_arc in &self.devices {
+            if let Ok(dev_guard) = dev_arc.lock() {
+                let name = dev_guard.name().to_string();
+                let state = dev_guard.save_state()?;
+                devices.insert(name, state);
+            }
+        }
+
+        Ok(Snapshot::new(
+            self.arch, ram_base, cpu_state, ram_data, uart_state, rom_state, devices,
+        ))
+    }
+
+    /// Restore the virtual machine to the state captured in a snapshot.
+    pub fn load_snapshot(&mut self, snapshot: &Snapshot) -> Result<(), MelError> {
+        if snapshot.arch != self.arch {
+            return Err(MelError::Config(format!(
+                "Architecture mismatch in snapshot: VM is {:?}, snapshot is {:?}",
+                self.arch, snapshot.arch
+            )));
+        }
+
+        // Restore CPU
+        self.cpu.load_state(&snapshot.cpu_state)?;
+
+        // Restore RAM
+        {
+            let mut ram_guard = self
+                .ram
+                .lock()
+                .map_err(|e| MelError::Cpu(mel_core::CpuError::Internal(e.to_string())))?;
+            let current_size = ram_guard.size();
+            let copy_len = current_size.min(snapshot.ram_data.len());
+            ram_guard.as_mut_slice()[..copy_len].copy_from_slice(&snapshot.ram_data[..copy_len]);
+        }
+
+        // Synchronize CPU backend memory
+        self.cpu.mem_write(snapshot.ram_base, &snapshot.ram_data)?;
+
+        // Restore UART
+        if let (Some(uart_arc), Some(uart_data)) = (&self.uart, &snapshot.uart_state) {
+            if let Ok(mut uart_guard) = uart_arc.lock() {
+                uart_guard.load_state(uart_data)?;
+            }
+        }
+
+        // Restore Boot ROM
+        if let (Some(rom_arc), Some(rom_data)) = (&self.rom, &snapshot.rom_state) {
+            if let Ok(mut rom_guard) = rom_arc.lock() {
+                rom_guard.load_state(rom_data)?;
+            }
+        }
+
+        // Restore auxiliary devices
+        for dev_arc in &self.devices {
+            if let Ok(mut dev_guard) = dev_arc.lock() {
+                if let Some(dev_data) = snapshot.devices.get(dev_guard.name()) {
+                    dev_guard.load_state(dev_data)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Save snapshot directly to a file on disk.
+    pub fn save_snapshot_to_file(&self, path: impl AsRef<std::path::Path>) -> Result<(), MelError> {
+        let snapshot = self.save_snapshot()?;
+        snapshot.save_to_file(path)
+    }
+
+    /// Load snapshot directly from a file on disk and restore machine state.
+    pub fn load_snapshot_from_file(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<(), MelError> {
+        let snapshot = Snapshot::load_from_file(path)?;
+        self.load_snapshot(&snapshot)
     }
 }
 
