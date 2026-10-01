@@ -7,6 +7,7 @@ pub mod hook;
 pub mod mock;
 pub mod riscv64;
 pub mod traits;
+pub mod x86_64;
 
 pub use arm64::Arm64Cpu;
 pub use hook::{register_bus_hooks, CpuBusBridge};
@@ -17,6 +18,7 @@ pub use riscv64::{
     MSTATUS_MPP_MASK,
 };
 pub use traits::{CpuBackend, CpuStepResult};
+pub use x86_64::X86_64Cpu;
 
 pub use mel_core::{
     Address, Architecture, CpuError, MelError, MelResult, RegisterId, RegisterValue,
