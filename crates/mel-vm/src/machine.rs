@@ -4,8 +4,8 @@ use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
 use mel_devices::{
-    BootRom, Clint, MmioDevice, Plic, SharedMmioBusAdapter, Uart16550, CLINT_BASE, CLINT_SIZE,
-    PLIC_BASE, PLIC_SIZE, UART0_IRQ,
+    BlockDevice, BootRom, Clint, MmioDevice, Plic, SharedMmioBusAdapter, Uart16550, BLOCK0_IRQ,
+    BLOCK_BASE, BLOCK_SIZE, CLINT_BASE, CLINT_SIZE, PLIC_BASE, PLIC_SIZE, UART0_IRQ,
 };
 use mel_memory::Ram;
 use std::collections::HashMap;
@@ -23,6 +23,7 @@ pub struct VirtualMachine {
     rom: Option<Arc<Mutex<BootRom>>>,
     clint: Option<Arc<Mutex<Clint>>>,
     plic: Option<Arc<Mutex<Plic>>>,
+    block: Option<Arc<Mutex<BlockDevice>>>,
 }
 
 impl VirtualMachine {
@@ -38,6 +39,7 @@ impl VirtualMachine {
         rom: Option<Arc<Mutex<BootRom>>>,
         clint: Option<Arc<Mutex<Clint>>>,
         plic: Option<Arc<Mutex<Plic>>>,
+        block: Option<Arc<Mutex<BlockDevice>>>,
     ) -> Self {
         Self {
             arch,
@@ -49,6 +51,7 @@ impl VirtualMachine {
             rom,
             clint,
             plic,
+            block,
         }
     }
 
@@ -110,6 +113,13 @@ impl VirtualMachine {
         if let Some(plic) = &self.plic {
             if let Ok(p) = plic.lock() {
                 self.cpu.set_external_interrupt(p.is_external_interrupt_pending(0));
+            }
+        }
+
+        // 4. Block Device -> PLIC source 1 (BLOCK0_IRQ)
+        if let (Some(block), Some(plic)) = (&self.block, &self.plic) {
+            if let (Ok(b), Ok(mut p)) = (block.lock(), plic.lock()) {
+                p.set_irq_source(BLOCK0_IRQ, b.is_interrupting());
             }
         }
     }
@@ -174,6 +184,11 @@ impl VirtualMachine {
     /// Access PLIC interrupt controller if mapped.
     pub fn plic(&self) -> Option<Arc<Mutex<Plic>>> {
         self.plic.clone()
+    }
+
+    /// Access Block Storage device if mapped.
+    pub fn block_device(&self) -> Option<Arc<Mutex<BlockDevice>>> {
+        self.block.clone()
     }
 
     /// Write data into VM system memory and synchronize with CPU backend.
@@ -356,9 +371,14 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     let plic_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(plic.clone())));
     bus.map_device("PLIC", PLIC_BASE, PLIC_SIZE, plic_adapter)?;
 
+    // 6. Block Storage (4 KB at 0x2000_0000)
+    let block = Arc::new(Mutex::new(BlockDevice::new("blk0", 1024 * 1024)));
+    let block_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(block.clone())));
+    bus.map_device("BLOCK", BLOCK_BASE, BLOCK_SIZE, block_adapter)?;
+
     let bus_arc = Arc::new(Mutex::new(bus));
 
-    // 6. RISC-V 64 CPU backend with bus bridge
+    // 7. RISC-V 64 CPU backend with bus bridge
     let mut cpu = Riscv64Cpu::with_bus(bus_arc.clone())?;
     cpu.mem_map(0x8000_0000, ram_size as u64, Prot::ALL)?;
     cpu.mem_map(0x0000_1000, 0x1000, Prot::ALL)?;
@@ -367,8 +387,13 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     }
     cpu.set_pc(0x8000_0000)?;
 
-    let devices: Vec<Arc<Mutex<dyn MmioDevice>>> =
-        vec![rom.clone(), uart.clone(), clint.clone(), plic.clone()];
+    let devices: Vec<Arc<Mutex<dyn MmioDevice>>> = vec![
+        rom.clone(),
+        uart.clone(),
+        clint.clone(),
+        plic.clone(),
+        block.clone(),
+    ];
 
     Ok(VirtualMachine::new(
         Architecture::Riscv64,
@@ -380,6 +405,7 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
         Some(rom),
         Some(clint),
         Some(plic),
+        Some(block),
     ))
 }
 
@@ -405,6 +431,7 @@ pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
         ram,
         devices,
         Some(uart),
+        None,
         None,
         None,
         None,
@@ -662,5 +689,47 @@ mod tests {
             vm.read_register(RegisterId::named("mepc")).unwrap(),
             0x8000_0014
         );
+    }
+
+    #[test]
+    fn test_riscv64_vm_block_device_mmio_and_interrupt() {
+        let mut vm = create_basic_riscv64_vm().unwrap();
+        assert!(vm.block_device().is_some());
+
+        let block = vm.block_device().unwrap();
+        let plic = vm.plic().unwrap();
+
+        // 1. Configure PLIC: Enable Block0 IRQ (source 1) with priority 4 in Context 0
+        {
+            let mut p = plic.lock().unwrap();
+            p.set_priority(BLOCK0_IRQ, 4);
+            p.set_enabled(0, BLOCK0_IRQ, true);
+            p.set_threshold(0, 0);
+        }
+
+        // 2. Perform Block MMIO write through system bus: write data to sector 2
+        {
+            let mut b = block.lock().unwrap();
+            b.write(mel_devices::REG_INT_ENABLE, 1, 4).unwrap();
+            b.write(mel_devices::REG_SECTOR_NUM, 2, 8).unwrap();
+            b.write(mel_devices::BUFFER_OFFSET, 0x42, 1).unwrap();
+            b.write(mel_devices::REG_COMMAND, mel_devices::CMD_WRITE as u64, 4)
+                .unwrap();
+            assert!(b.is_interrupting());
+        }
+
+        // 3. Step VM with NOP in RAM
+        let nops = vec![0x13, 0x00, 0x00, 0x00];
+        vm.write_memory(0x8000_0000, &nops).unwrap();
+        vm.set_pc(0x8000_0000).unwrap();
+        vm.step().unwrap();
+
+        // 4. Verify PLIC received Block0 interrupt
+        {
+            let mut p = plic.lock().unwrap();
+            assert!(p.is_pending(BLOCK0_IRQ));
+            assert_eq!(p.claim(0), BLOCK0_IRQ);
+            p.complete(0, BLOCK0_IRQ);
+        }
     }
 }
