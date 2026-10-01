@@ -3,7 +3,9 @@ use mel_bus::SystemBus;
 use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
-use mel_devices::{BootRom, MmioDevice, SharedMmioBusAdapter, Uart16550};
+use mel_devices::{
+    BootRom, Clint, MmioDevice, SharedMmioBusAdapter, Uart16550, CLINT_BASE, CLINT_SIZE,
+};
 use mel_memory::Ram;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -18,10 +20,12 @@ pub struct VirtualMachine {
     devices: Vec<Arc<Mutex<dyn MmioDevice>>>,
     uart: Option<Arc<Mutex<Uart16550>>>,
     rom: Option<Arc<Mutex<BootRom>>>,
+    clint: Option<Arc<Mutex<Clint>>>,
 }
 
 impl VirtualMachine {
     /// Construct a new VirtualMachine from components.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         arch: Architecture,
         cpu: Box<dyn CpuBackend>,
@@ -30,6 +34,7 @@ impl VirtualMachine {
         devices: Vec<Arc<Mutex<dyn MmioDevice>>>,
         uart: Option<Arc<Mutex<Uart16550>>>,
         rom: Option<Arc<Mutex<BootRom>>>,
+        clint: Option<Arc<Mutex<Clint>>>,
     ) -> Self {
         Self {
             arch,
@@ -39,6 +44,7 @@ impl VirtualMachine {
             devices,
             uart,
             rom,
+            clint,
         }
     }
 
@@ -126,6 +132,11 @@ impl VirtualMachine {
     /// Access Boot ROM if mapped.
     pub fn boot_rom(&self) -> Option<Arc<Mutex<BootRom>>> {
         self.rom.clone()
+    }
+
+    /// Access CLINT timer peripheral if mapped.
+    pub fn clint(&self) -> Option<Arc<Mutex<Clint>>> {
+        self.clint.clone()
     }
 
     /// Write data into VM system memory and synchronize with CPU backend.
@@ -298,9 +309,14 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     let uart_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(uart.clone())));
     bus.map_device("UART", 0x1000_0000, 0x100, uart_adapter)?;
 
+    // 4. CLINT (64 KB at 0x0200_0000)
+    let clint = Arc::new(Mutex::new(Clint::new("clint0")));
+    let clint_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(clint.clone())));
+    bus.map_device("CLINT", CLINT_BASE, CLINT_SIZE, clint_adapter)?;
+
     let bus_arc = Arc::new(Mutex::new(bus));
 
-    // 4. RISC-V 64 CPU backend with bus bridge
+    // 5. RISC-V 64 CPU backend with bus bridge
     let mut cpu = Riscv64Cpu::with_bus(bus_arc.clone())?;
     cpu.mem_map(0x8000_0000, ram_size as u64, Prot::ALL)?;
     cpu.mem_map(0x0000_1000, 0x1000, Prot::ALL)?;
@@ -309,7 +325,8 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     }
     cpu.set_pc(0x8000_0000)?;
 
-    let devices: Vec<Arc<Mutex<dyn MmioDevice>>> = vec![rom.clone(), uart.clone()];
+    let devices: Vec<Arc<Mutex<dyn MmioDevice>>> =
+        vec![rom.clone(), uart.clone(), clint.clone()];
 
     Ok(VirtualMachine::new(
         Architecture::Riscv64,
@@ -319,6 +336,7 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
         devices,
         Some(uart),
         Some(rom),
+        Some(clint),
     ))
 }
 
@@ -344,6 +362,7 @@ pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
         ram,
         devices,
         Some(uart),
+        None,
         None,
     ))
 }
@@ -378,6 +397,53 @@ mod tests {
         // Verify UART output access
         assert!(vm.uart().is_some());
         assert!(vm.boot_rom().is_some());
+        assert!(vm.clint().is_some());
+
+        // Verify CLINT is mapped on bus at 0x0200_0000
+        let clint_arc = vm.clint().unwrap();
+        assert_eq!(clint_arc.lock().unwrap().mtime(), 0);
+    }
+
+    #[test]
+    fn test_riscv64_vm_clint_tick_and_mmio_execution() {
+        let mut vm = create_basic_riscv64_vm().unwrap();
+
+        // 1. Initial state check
+        let clint = vm.clint().unwrap();
+        assert_eq!(clint.lock().unwrap().mtime(), 0);
+
+        // 2. Guest instructions writing mtimecmp via MMIO (0x0200_4000):
+        // lui x1, 0x2004      (x1 = 0x0200_4000)
+        // addi x2, x0, 100    (x2 = 100)
+        // sd x2, 0(x1)        (store 64-bit 100 to mtimecmp)
+        // followed by NOPs (addi x0, x0, 0)
+        let mut code = Vec::new();
+        code.extend_from_slice(&0x020040b7u32.to_le_bytes()); // lui x1, 0x2004
+        code.extend_from_slice(&0x06400113u32.to_le_bytes()); // addi x2, x0, 100
+        code.extend_from_slice(&0x0020b023u32.to_le_bytes()); // sd x2, 0(x1)
+        for _ in 0..100 {
+            code.extend_from_slice(&0x00000013u32.to_le_bytes()); // nop
+        }
+
+        vm.write_memory(0x8000_0000, &code).unwrap();
+        vm.set_pc(0x8000_0000).unwrap();
+
+        vm.step().unwrap(); // lui
+        assert_eq!(clint.lock().unwrap().mtime(), 1);
+
+        vm.step().unwrap(); // addi
+        assert_eq!(clint.lock().unwrap().mtime(), 2);
+
+        vm.step().unwrap(); // sd
+        assert_eq!(clint.lock().unwrap().mtime(), 3);
+
+        assert_eq!(clint.lock().unwrap().mtimecmp(), 100);
+        assert!(!clint.lock().unwrap().is_timer_interrupt_pending());
+
+        // Advance 97 more cycles (to reach mtime == 100)
+        vm.run(97).unwrap();
+        assert_eq!(clint.lock().unwrap().mtime(), 100);
+        assert!(clint.lock().unwrap().is_timer_interrupt_pending());
     }
 
     #[test]

@@ -2,11 +2,15 @@
 //!
 //! MMIO peripheral devices: UART 16550, CLINT timer, PLIC, Block Device, Boot ROM.
 
+pub mod clint;
 pub mod device_trait;
 pub mod dummy;
 pub mod rom;
 pub mod uart16550;
 
+pub use clint::{
+    Clint, CLINT_BASE, CLINT_MSIP_BASE, CLINT_MTIME, CLINT_MTIMECMP_BASE, CLINT_SIZE,
+};
 pub use device_trait::{MmioBusAdapter, MmioDevice, SharedMmioBusAdapter};
 pub use dummy::DummyDevice;
 pub use mel_core::{Address, MelError, MelResult};
