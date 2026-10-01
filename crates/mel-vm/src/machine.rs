@@ -4,7 +4,8 @@ use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
 use mel_devices::{
-    BootRom, Clint, MmioDevice, SharedMmioBusAdapter, Uart16550, CLINT_BASE, CLINT_SIZE,
+    BootRom, Clint, MmioDevice, Plic, SharedMmioBusAdapter, Uart16550, CLINT_BASE, CLINT_SIZE,
+    PLIC_BASE, PLIC_SIZE, UART0_IRQ,
 };
 use mel_memory::Ram;
 use std::collections::HashMap;
@@ -21,6 +22,7 @@ pub struct VirtualMachine {
     uart: Option<Arc<Mutex<Uart16550>>>,
     rom: Option<Arc<Mutex<BootRom>>>,
     clint: Option<Arc<Mutex<Clint>>>,
+    plic: Option<Arc<Mutex<Plic>>>,
 }
 
 impl VirtualMachine {
@@ -35,6 +37,7 @@ impl VirtualMachine {
         uart: Option<Arc<Mutex<Uart16550>>>,
         rom: Option<Arc<Mutex<BootRom>>>,
         clint: Option<Arc<Mutex<Clint>>>,
+        plic: Option<Arc<Mutex<Plic>>>,
     ) -> Self {
         Self {
             arch,
@@ -45,6 +48,7 @@ impl VirtualMachine {
             uart,
             rom,
             clint,
+            plic,
         }
     }
 
@@ -65,6 +69,7 @@ impl VirtualMachine {
                 let _ = d.tick(cycles);
             }
         }
+        self.sync_interrupts();
         Ok(step_result)
     }
 
@@ -80,7 +85,33 @@ impl VirtualMachine {
                 let _ = d.tick(cycles);
             }
         }
+        self.sync_interrupts();
         Ok(run_result)
+    }
+
+    /// Synchronize hardware interrupt lines across peripherals and CPU core.
+    fn sync_interrupts(&mut self) {
+        // 1. UART -> PLIC source 10
+        if let (Some(uart), Some(plic)) = (&self.uart, &self.plic) {
+            if let (Ok(u), Ok(mut p)) = (uart.lock(), plic.lock()) {
+                p.set_irq_source(UART0_IRQ, u.is_interrupting());
+            }
+        }
+
+        // 2. CLINT -> CPU MTIP and MSIP
+        if let Some(clint) = &self.clint {
+            if let Ok(c) = clint.lock() {
+                self.cpu.set_timer_interrupt(c.is_timer_interrupt_pending());
+                self.cpu.set_software_interrupt(c.is_software_interrupt_pending());
+            }
+        }
+
+        // 3. PLIC -> CPU MEIP (Context 0: Hart 0 M-mode)
+        if let Some(plic) = &self.plic {
+            if let Ok(p) = plic.lock() {
+                self.cpu.set_external_interrupt(p.is_external_interrupt_pending(0));
+            }
+        }
     }
 
     /// Reset the CPU and all peripherals to power-on state.
@@ -91,6 +122,7 @@ impl VirtualMachine {
                 let _ = d.reset();
             }
         }
+        self.sync_interrupts();
         Ok(())
     }
 
@@ -137,6 +169,11 @@ impl VirtualMachine {
     /// Access CLINT timer peripheral if mapped.
     pub fn clint(&self) -> Option<Arc<Mutex<Clint>>> {
         self.clint.clone()
+    }
+
+    /// Access PLIC interrupt controller if mapped.
+    pub fn plic(&self) -> Option<Arc<Mutex<Plic>>> {
+        self.plic.clone()
     }
 
     /// Write data into VM system memory and synchronize with CPU backend.
@@ -314,9 +351,14 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     let clint_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(clint.clone())));
     bus.map_device("CLINT", CLINT_BASE, CLINT_SIZE, clint_adapter)?;
 
+    // 5. PLIC (64 MB at 0x0C00_0000)
+    let plic = Arc::new(Mutex::new(Plic::new("plic0")));
+    let plic_adapter = Arc::new(Mutex::new(SharedMmioBusAdapter(plic.clone())));
+    bus.map_device("PLIC", PLIC_BASE, PLIC_SIZE, plic_adapter)?;
+
     let bus_arc = Arc::new(Mutex::new(bus));
 
-    // 5. RISC-V 64 CPU backend with bus bridge
+    // 6. RISC-V 64 CPU backend with bus bridge
     let mut cpu = Riscv64Cpu::with_bus(bus_arc.clone())?;
     cpu.mem_map(0x8000_0000, ram_size as u64, Prot::ALL)?;
     cpu.mem_map(0x0000_1000, 0x1000, Prot::ALL)?;
@@ -326,7 +368,7 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     cpu.set_pc(0x8000_0000)?;
 
     let devices: Vec<Arc<Mutex<dyn MmioDevice>>> =
-        vec![rom.clone(), uart.clone(), clint.clone()];
+        vec![rom.clone(), uart.clone(), clint.clone(), plic.clone()];
 
     Ok(VirtualMachine::new(
         Architecture::Riscv64,
@@ -337,6 +379,7 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
         Some(uart),
         Some(rom),
         Some(clint),
+        Some(plic),
     ))
 }
 
@@ -364,6 +407,7 @@ pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
         Some(uart),
         None,
         None,
+        None,
     ))
 }
 
@@ -371,6 +415,7 @@ pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
 mod tests {
     use super::*;
     use mel_core::Endianness;
+    use mel_devices::{UART_IER, UART_RBR};
 
     #[test]
     fn test_basic_riscv64_vm_composition() {
@@ -489,5 +534,133 @@ mod tests {
 
         vm.reset().unwrap();
         assert_eq!(vm.pc().unwrap(), 0x4000_0000);
+    }
+
+    #[test]
+    fn test_riscv64_vm_plic_uart_interrupt_flow() {
+        let mut vm = create_basic_riscv64_vm().unwrap();
+        assert!(vm.plic().is_some());
+
+        // Initialize RAM with NOPs (addi x0, x0, 0 = 0x00000013)
+        let nops = vec![0x13, 0x00, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00];
+        vm.write_memory(0x8000_0000, &nops).unwrap();
+        vm.set_pc(0x8000_0000).unwrap();
+
+        let plic = vm.plic().unwrap();
+        let uart = vm.uart().unwrap();
+
+        // 1. Configure PLIC: Enable UART0 (source 10) in Context 0 with priority 5
+        {
+            let mut p = plic.lock().unwrap();
+            p.set_priority(UART0_IRQ, 5);
+            p.set_enabled(0, UART0_IRQ, true);
+            p.set_threshold(0, 0);
+        }
+
+        // 2. Enable UART Received Data Available Interrupt (IER = 0x01)
+        {
+            let mut u = uart.lock().unwrap();
+            u.write(UART_IER, 0x01, 1).unwrap();
+            u.push_input(b'A');
+            assert!(u.is_interrupting());
+        }
+
+        // 3. Step VM to trigger interrupt synchronization
+        vm.step().unwrap();
+
+        // 4. Verify PLIC received the UART interrupt and asserted external interrupt
+        {
+            let mut p = plic.lock().unwrap();
+            assert!(p.is_pending(UART0_IRQ));
+            assert!(p.is_external_interrupt_pending(0));
+
+            // Claim the interrupt
+            let claimed = p.claim(0);
+            assert_eq!(claimed, UART0_IRQ);
+            assert!(!p.is_pending(UART0_IRQ));
+
+            // Deassert UART interrupt by reading the received byte
+            drop(p);
+        }
+
+        {
+            let mut u = uart.lock().unwrap();
+            let byte = u.read(UART_RBR, 1).unwrap();
+            assert_eq!(byte, b'A' as u64);
+            assert!(!u.is_interrupting());
+        }
+
+        // Step VM to re-sync
+        vm.step().unwrap();
+
+        {
+            let mut p = plic.lock().unwrap();
+            p.complete(0, UART0_IRQ);
+            assert!(!p.is_pending(UART0_IRQ));
+            assert!(!p.is_external_interrupt_pending(0));
+        }
+    }
+
+    #[test]
+    fn test_riscv64_vm_timer_trap_preemption() {
+        let mut vm = create_basic_riscv64_vm().unwrap();
+        let clint = vm.clint().unwrap();
+
+        // NOP instructions in RAM at 0x8000_0000
+        let mut code = Vec::new();
+        for _ in 0..20 {
+            code.extend_from_slice(&0x00000013u32.to_le_bytes()); // nop
+        }
+        vm.write_memory(0x8000_0000, &code).unwrap();
+        vm.set_pc(0x8000_0000).unwrap();
+
+        // Configure Trap Vector at 0x8000_1000
+        vm.write_register(RegisterId::named("mtvec"), 0x8000_1000)
+            .unwrap();
+        // Enable Machine global interrupts (MIE = bit 3) and timer interrupts (MTIE = bit 7)
+        vm.write_register(RegisterId::named("mstatus"), 1 << 3)
+            .unwrap();
+        vm.write_register(RegisterId::named("mie"), 1 << 7)
+            .unwrap();
+
+        // Configure CLINT: mtime = 0, mtimecmp = 5
+        {
+            let mut c = clint.lock().unwrap();
+            c.set_mtime(0);
+            c.set_mtimecmp(5);
+        }
+
+        // Step 1 to 4: mtime increments to 4, no trap
+        for i in 1..=4 {
+            let res = vm.step().unwrap();
+            assert_eq!(res, CpuStepResult::Ok { cycles: 1 });
+            assert_eq!(clint.lock().unwrap().mtime(), i);
+        }
+
+        // Step 5: mtime reaches 5 == mtimecmp -> CLINT asserts timer interrupt line
+        let res5 = vm.step().unwrap();
+        assert_eq!(res5, CpuStepResult::Ok { cycles: 1 });
+        assert_eq!(clint.lock().unwrap().mtime(), 5);
+        assert!(clint.lock().unwrap().is_timer_interrupt_pending());
+
+        // Step 6: Next CPU step delivers timer trap!
+        let res6 = vm.step().unwrap();
+        let expected_cause = (1u64 << 63) | 7;
+        assert_eq!(
+            res6,
+            CpuStepResult::Trap {
+                cause: expected_cause,
+                epc: 0x8000_0014,
+            }
+        );
+        assert_eq!(vm.pc().unwrap(), 0x8000_1000);
+        assert_eq!(
+            vm.read_register(RegisterId::named("mcause")).unwrap(),
+            expected_cause
+        );
+        assert_eq!(
+            vm.read_register(RegisterId::named("mepc")).unwrap(),
+            0x8000_0014
+        );
     }
 }

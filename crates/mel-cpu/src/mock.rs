@@ -127,6 +127,55 @@ impl CpuBackend for MockCpu {
         *self = restored;
         Ok(())
     }
+
+    fn set_timer_interrupt(&mut self, pending: bool) {
+        let mut mip = self.registers.get("mip").copied().unwrap_or(0);
+        if pending {
+            mip |= 1 << 7;
+        } else {
+            mip &= !(1 << 7);
+        }
+        self.registers.insert("mip".to_string(), mip);
+    }
+
+    fn set_software_interrupt(&mut self, pending: bool) {
+        let mut mip = self.registers.get("mip").copied().unwrap_or(0);
+        if pending {
+            mip |= 1 << 3;
+        } else {
+            mip &= !(1 << 3);
+        }
+        self.registers.insert("mip".to_string(), mip);
+    }
+
+    fn set_external_interrupt(&mut self, pending: bool) {
+        let mut mip = self.registers.get("mip").copied().unwrap_or(0);
+        if pending {
+            mip |= 1 << 11;
+        } else {
+            mip &= !(1 << 11);
+        }
+        self.registers.insert("mip".to_string(), mip);
+    }
+
+    fn check_pending_interrupt(&self) -> Option<u64> {
+        let mstatus = self.registers.get("mstatus").copied().unwrap_or(0);
+        if (mstatus & (1 << 3)) == 0 {
+            return None;
+        }
+        let mip = self.registers.get("mip").copied().unwrap_or(0);
+        let mie = self.registers.get("mie").copied().unwrap_or(0);
+        let active = mip & mie;
+        if (active & (1 << 11)) != 0 {
+            Some(11)
+        } else if (active & (1 << 3)) != 0 {
+            Some(3)
+        } else if (active & (1 << 7)) != 0 {
+            Some(7)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]

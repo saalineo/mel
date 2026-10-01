@@ -61,4 +61,18 @@ pub trait CpuBackend: Send + Sync {
     fn mem_read(&self, _addr: u64, _bytes: &mut [u8]) -> Result<(), MelError> {
         Ok(())
     }
+
+    /// Assert or clear timer interrupt pending line (e.g. RISC-V MTIP).
+    fn set_timer_interrupt(&mut self, _pending: bool) {}
+
+    /// Assert or clear software interrupt pending line (e.g. RISC-V MSIP).
+    fn set_software_interrupt(&mut self, _pending: bool) {}
+
+    /// Assert or clear external interrupt pending line (e.g. RISC-V MEIP).
+    fn set_external_interrupt(&mut self, _pending: bool) {}
+
+    /// Check if an enabled interrupt is pending delivery.
+    fn check_pending_interrupt(&self) -> Option<u64> {
+        None
+    }
 }

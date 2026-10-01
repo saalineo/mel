@@ -1,4 +1,4 @@
-//! Unicorn-based RISC-V 64-bit CPU backend.
+//! Unicorn-based RISC-V 64-bit CPU backend with full interrupt and trap handling.
 
 use crate::traits::{CpuBackend, CpuStepResult};
 use mel_core::{Architecture, CpuError, MelError, RegisterId};
@@ -7,18 +7,68 @@ use std::collections::HashSet;
 use unicorn_engine::unicorn_const::*;
 use unicorn_engine::{RegisterRISCV, Unicorn};
 
+/// Machine Status Register: Machine Interrupt Enable bit (bit 3).
+pub const MSTATUS_MIE: u64 = 1 << 3;
+
+/// Machine Status Register: Machine Previous Interrupt Enable bit (bit 7).
+pub const MSTATUS_MPIE: u64 = 1 << 7;
+
+/// Machine Status Register: Machine Previous Privilege Mode mask (bits 11..12).
+pub const MSTATUS_MPP_MASK: u64 = 3 << 11;
+
+/// Machine Status Register: Machine Previous Privilege Mode = Machine Mode (3 << 11).
+pub const MSTATUS_MPP_M: u64 = 3 << 11;
+
+/// Machine Interrupt Enable / Pending: Software Interrupt (bit 3).
+pub const MIE_MSIE: u64 = 1 << 3;
+pub const MIP_MSIP: u64 = 1 << 3;
+
+/// Machine Interrupt Enable / Pending: Timer Interrupt (bit 7).
+pub const MIE_MTIE: u64 = 1 << 7;
+pub const MIP_MTIP: u64 = 1 << 7;
+
+/// Machine Interrupt Enable / Pending: External Interrupt (bit 11).
+pub const MIE_MEIE: u64 = 1 << 11;
+pub const MIP_MEIP: u64 = 1 << 11;
+
+/// Machine Cause: Interrupt Bit (MSB, bit 63).
+pub const MCAUSE_INTERRUPT_BIT: u64 = 1 << 63;
+
+/// Machine Cause: Machine Software Interrupt exception code (3).
+pub const MCAUSE_MSI: u64 = 3;
+
+/// Machine Cause: Machine Timer Interrupt exception code (7).
+pub const MCAUSE_MTI: u64 = 7;
+
+/// Machine Cause: Machine External Interrupt exception code (11).
+pub const MCAUSE_MEI: u64 = 11;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Riscv64State {
     pc: u64,
     gprs: [u64; 32],
     cycles: u64,
+    mstatus: u64,
+    mie: u64,
+    mip: u64,
+    mtvec: u64,
+    mepc: u64,
+    mcause: u64,
+    mtval: u64,
 }
 
-/// RISC-V 64-bit CPU backend powered by the Unicorn Engine.
+/// RISC-V 64-bit CPU backend powered by the Unicorn Engine with CSR interrupt delivery.
 pub struct Riscv64Cpu {
     uc: Unicorn<'static, ()>,
     breakpoints: HashSet<u64>,
     cycles_executed: u64,
+    mstatus: u64,
+    mie: u64,
+    mip: u64,
+    mtvec: u64,
+    mepc: u64,
+    mcause: u64,
+    mtval: u64,
 }
 
 unsafe impl Send for Riscv64Cpu {}
@@ -38,6 +88,13 @@ impl Riscv64Cpu {
             uc,
             breakpoints: HashSet::new(),
             cycles_executed: 0,
+            mstatus: MSTATUS_MPP_M,
+            mie: 0,
+            mip: 0,
+            mtvec: reset_pc,
+            mepc: 0,
+            mcause: 0,
+            mtval: 0,
         })
     }
 
@@ -102,6 +159,170 @@ impl Riscv64Cpu {
     /// Access the underlying Unicorn engine mutable reference.
     pub fn unicorn_mut(&mut self) -> &mut Unicorn<'static, ()> {
         &mut self.uc
+    }
+
+    /// Read `mstatus` CSR.
+    pub fn mstatus(&self) -> u64 {
+        self.mstatus
+    }
+
+    /// Write `mstatus` CSR.
+    pub fn set_mstatus(&mut self, val: u64) {
+        self.mstatus = val;
+    }
+
+    /// Read `mie` CSR.
+    pub fn mie(&self) -> u64 {
+        self.mie
+    }
+
+    /// Write `mie` CSR.
+    pub fn set_mie(&mut self, val: u64) {
+        self.mie = val;
+    }
+
+    /// Read `mip` CSR.
+    pub fn mip(&self) -> u64 {
+        self.mip
+    }
+
+    /// Write `mip` CSR.
+    pub fn set_mip(&mut self, val: u64) {
+        self.mip = val;
+    }
+
+    /// Read `mtvec` CSR.
+    pub fn mtvec(&self) -> u64 {
+        self.mtvec
+    }
+
+    /// Write `mtvec` CSR.
+    pub fn set_mtvec(&mut self, val: u64) {
+        self.mtvec = val;
+    }
+
+    /// Read `mepc` CSR.
+    pub fn mepc(&self) -> u64 {
+        self.mepc
+    }
+
+    /// Write `mepc` CSR.
+    pub fn set_mepc(&mut self, val: u64) {
+        self.mepc = val;
+    }
+
+    /// Read `mcause` CSR.
+    pub fn mcause(&self) -> u64 {
+        self.mcause
+    }
+
+    /// Write `mcause` CSR.
+    pub fn set_mcause(&mut self, val: u64) {
+        self.mcause = val;
+    }
+
+    /// Read `mtval` CSR.
+    pub fn mtval(&self) -> u64 {
+        self.mtval
+    }
+
+    /// Write `mtval` CSR.
+    pub fn set_mtval(&mut self, val: u64) {
+        self.mtval = val;
+    }
+
+    /// Set or clear timer interrupt pending (MTIP).
+    pub fn set_timer_interrupt(&mut self, pending: bool) {
+        if pending {
+            self.mip |= MIP_MTIP;
+        } else {
+            self.mip &= !MIP_MTIP;
+        }
+    }
+
+    /// Set or clear software interrupt pending (MSIP).
+    pub fn set_software_interrupt(&mut self, pending: bool) {
+        if pending {
+            self.mip |= MIP_MSIP;
+        } else {
+            self.mip &= !MIP_MSIP;
+        }
+    }
+
+    /// Set or clear external interrupt pending (MEIP).
+    pub fn set_external_interrupt(&mut self, pending: bool) {
+        if pending {
+            self.mip |= MIP_MEIP;
+        } else {
+            self.mip &= !MIP_MEIP;
+        }
+    }
+
+    /// Check if any enabled interrupt is pending delivery.
+    /// RISC-V priority: MEI (11) > MSI (3) > MTI (7).
+    pub fn check_pending_interrupt(&self) -> Option<u64> {
+        if (self.mstatus & MSTATUS_MIE) == 0 {
+            return None;
+        }
+        let active = self.mip & self.mie;
+        if (active & MIP_MEIP) != 0 {
+            Some(MCAUSE_MEI)
+        } else if (active & MIP_MSIP) != 0 {
+            Some(MCAUSE_MSI)
+        } else if (active & MIP_MTIP) != 0 {
+            Some(MCAUSE_MTI)
+        } else {
+            None
+        }
+    }
+
+    /// Deliver an asynchronous trap for the given cause code.
+    pub fn deliver_trap(&mut self, cause_code: u64) -> Result<CpuStepResult, MelError> {
+        let current_pc = self.pc()?;
+        self.mepc = current_pc;
+        self.mcause = MCAUSE_INTERRUPT_BIT | cause_code;
+        self.mtval = 0;
+
+        // Transition mstatus: MPIE <= MIE, MIE <= 0, MPP <= 3 (Machine mode)
+        let mstatus_mie = (self.mstatus & MSTATUS_MIE) != 0;
+        let mut new_mstatus = self.mstatus & !MSTATUS_MIE;
+        if mstatus_mie {
+            new_mstatus |= MSTATUS_MPIE;
+        } else {
+            new_mstatus &= !MSTATUS_MPIE;
+        }
+        new_mstatus = (new_mstatus & !MSTATUS_MPP_MASK) | MSTATUS_MPP_M;
+        self.mstatus = new_mstatus;
+
+        // Determine target vector from mtvec (Direct mode 0 vs Vectored mode 1)
+        let mode = self.mtvec & 0x3;
+        let base = self.mtvec & !0x3;
+        let target_pc = if mode == 1 {
+            base.wrapping_add(cause_code.wrapping_mul(4))
+        } else {
+            base
+        };
+
+        self.set_pc(target_pc)?;
+        self.cycles_executed = self.cycles_executed.wrapping_add(1);
+
+        Ok(CpuStepResult::Trap {
+            cause: self.mcause,
+            epc: current_pc,
+        })
+    }
+
+    /// Return from Machine Mode trap (`mret`).
+    pub fn mret(&mut self) -> Result<(), MelError> {
+        let mpie = (self.mstatus & MSTATUS_MPIE) != 0;
+        if mpie {
+            self.mstatus |= MSTATUS_MIE;
+        } else {
+            self.mstatus &= !MSTATUS_MIE;
+        }
+        self.mstatus |= MSTATUS_MPIE;
+        self.set_pc(self.mepc)?;
+        Ok(())
     }
 }
 
@@ -238,6 +459,13 @@ impl CpuBackend for Riscv64Cpu {
                 .map_err(|e| MelError::Cpu(CpuError::Internal(e.to_string())))?;
         }
         self.cycles_executed = 0;
+        self.mstatus = MSTATUS_MPP_M;
+        self.mie = 0;
+        self.mip = 0;
+        self.mtvec = reset_pc;
+        self.mepc = 0;
+        self.mcause = 0;
+        self.mtval = 0;
         Ok(())
     }
 
@@ -245,6 +473,10 @@ impl CpuBackend for Riscv64Cpu {
         let current_pc = self.pc()?;
         if self.breakpoints.contains(&current_pc) {
             return Ok(CpuStepResult::Breakpoint { pc: current_pc });
+        }
+
+        if let Some(cause) = self.check_pending_interrupt() {
+            return self.deliver_trap(cause);
         }
 
         match self.uc.emu_start(current_pc, u64::MAX, 0, 1) {
@@ -267,34 +499,50 @@ impl CpuBackend for Riscv64Cpu {
     }
 
     fn run(&mut self, max_cycles: u64) -> Result<CpuStepResult, MelError> {
-        let current_pc = self.pc()?;
-        if self.breakpoints.contains(&current_pc) {
-            return Ok(CpuStepResult::Breakpoint { pc: current_pc });
-        }
+        let mut executed = 0;
+        while executed < max_cycles {
+            let current_pc = self.pc()?;
+            if self.breakpoints.contains(&current_pc) {
+                return Ok(CpuStepResult::Breakpoint { pc: current_pc });
+            }
 
-        match self
-            .uc
-            .emu_start(current_pc, u64::MAX, 0, max_cycles as usize)
-        {
-            Ok(()) => {
-                self.cycles_executed = self.cycles_executed.wrapping_add(max_cycles);
-                let next_pc = self.pc()?;
-                if self.breakpoints.contains(&next_pc) {
-                    Ok(CpuStepResult::Breakpoint { pc: next_pc })
-                } else {
-                    Ok(CpuStepResult::Ok { cycles: max_cycles })
+            if let Some(cause) = self.check_pending_interrupt() {
+                return self.deliver_trap(cause);
+            }
+
+            match self.uc.emu_start(current_pc, u64::MAX, 0, 1) {
+                Ok(()) => {
+                    self.cycles_executed = self.cycles_executed.wrapping_add(1);
+                    executed += 1;
+                    let next_pc = self.pc()?;
+                    if self.breakpoints.contains(&next_pc) {
+                        return Ok(CpuStepResult::Breakpoint { pc: next_pc });
+                    }
+                }
+                Err(err) => {
+                    let next_pc = self.pc().unwrap_or(current_pc);
+                    return Err(MelError::Cpu(CpuError::Internal(format!(
+                        "Unicorn emulation error at pc {next_pc:#x}: {err:?}"
+                    ))));
                 }
             }
-            Err(err) => {
-                let next_pc = self.pc().unwrap_or(current_pc);
-                Err(MelError::Cpu(CpuError::Internal(format!(
-                    "Unicorn emulation error at pc {next_pc:#x}: {err:?}"
-                ))))
-            }
         }
+
+        Ok(CpuStepResult::Ok { cycles: executed })
     }
 
     fn read_register(&self, reg: RegisterId) -> Result<u64, MelError> {
+        let name = reg.name.to_lowercase();
+        match name.as_str() {
+            "mstatus" => return Ok(self.mstatus),
+            "mie" => return Ok(self.mie),
+            "mip" => return Ok(self.mip),
+            "mtvec" => return Ok(self.mtvec),
+            "mepc" => return Ok(self.mepc),
+            "mcause" => return Ok(self.mcause),
+            "mtval" => return Ok(self.mtval),
+            _ => {}
+        }
         let uc_reg = resolve_register(&reg)?;
         self.uc
             .reg_read(uc_reg)
@@ -302,6 +550,38 @@ impl CpuBackend for Riscv64Cpu {
     }
 
     fn write_register(&mut self, reg: RegisterId, val: u64) -> Result<(), MelError> {
+        let name = reg.name.to_lowercase();
+        match name.as_str() {
+            "mstatus" => {
+                self.mstatus = val;
+                return Ok(());
+            }
+            "mie" => {
+                self.mie = val;
+                return Ok(());
+            }
+            "mip" => {
+                self.mip = val;
+                return Ok(());
+            }
+            "mtvec" => {
+                self.mtvec = val;
+                return Ok(());
+            }
+            "mepc" => {
+                self.mepc = val;
+                return Ok(());
+            }
+            "mcause" => {
+                self.mcause = val;
+                return Ok(());
+            }
+            "mtval" => {
+                self.mtval = val;
+                return Ok(());
+            }
+            _ => {}
+        }
         let uc_reg = resolve_register(&reg)?;
         self.uc
             .reg_write(uc_reg, val)
@@ -320,6 +600,22 @@ impl CpuBackend for Riscv64Cpu {
             .map_err(|e| MelError::Cpu(CpuError::Internal(e.to_string())))
     }
 
+    fn set_timer_interrupt(&mut self, pending: bool) {
+        self.set_timer_interrupt(pending);
+    }
+
+    fn set_software_interrupt(&mut self, pending: bool) {
+        self.set_software_interrupt(pending);
+    }
+
+    fn set_external_interrupt(&mut self, pending: bool) {
+        self.set_external_interrupt(pending);
+    }
+
+    fn check_pending_interrupt(&self) -> Option<u64> {
+        self.check_pending_interrupt()
+    }
+
     fn save_state(&self) -> Result<Vec<u8>, MelError> {
         let mut gprs = [0u64; 32];
         for (i, &reg) in GPR_REGISTERS.iter().enumerate() {
@@ -332,6 +628,13 @@ impl CpuBackend for Riscv64Cpu {
             pc: self.pc()?,
             gprs,
             cycles: self.cycles_executed,
+            mstatus: self.mstatus,
+            mie: self.mie,
+            mip: self.mip,
+            mtvec: self.mtvec,
+            mepc: self.mepc,
+            mcause: self.mcause,
+            mtval: self.mtval,
         };
         serde_json::to_vec(&state).map_err(|e| MelError::Cpu(CpuError::Internal(e.to_string())))
     }
@@ -346,6 +649,13 @@ impl CpuBackend for Riscv64Cpu {
                 .map_err(|e| MelError::Cpu(CpuError::Internal(e.to_string())))?;
         }
         self.cycles_executed = state.cycles;
+        self.mstatus = state.mstatus;
+        self.mie = state.mie;
+        self.mip = state.mip;
+        self.mtvec = state.mtvec;
+        self.mepc = state.mepc;
+        self.mcause = state.mcause;
+        self.mtval = state.mtval;
         Ok(())
     }
 
@@ -416,6 +726,8 @@ mod tests {
         cpu.set_pc(0x8000_0020).unwrap();
         cpu.write_register(RegisterId::named("t0"), 0xDEADBEEF)
             .unwrap();
+        cpu.set_mstatus(0x1808);
+        cpu.set_mie(0x88);
 
         let snapshot = cpu.save_state().unwrap();
 
@@ -427,5 +739,55 @@ mod tests {
             restored.read_register(RegisterId::named("t0")).unwrap(),
             0xDEADBEEF
         );
+        assert_eq!(restored.mstatus(), 0x1808);
+        assert_eq!(restored.mie(), 0x88);
+    }
+
+    #[test]
+    fn test_riscv64_timer_trap_delivery() {
+        let mut cpu = Riscv64Cpu::new().unwrap();
+        let ram_base = 0x8000_0000;
+        cpu.mem_map(ram_base, 0x1000, Prot::ALL).unwrap();
+
+        // 2 NOPs
+        let instructions = [0x13, 0x00, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00];
+        cpu.mem_write(ram_base, &instructions).unwrap();
+        cpu.set_pc(ram_base).unwrap();
+
+        // Direct mode trap handler at 0x8000_0800
+        cpu.set_mtvec(0x8000_0800);
+        // Enable Machine Global Interrupts (MIE) and Timer Interrupts (MTIE)
+        cpu.set_mstatus(MSTATUS_MIE);
+        cpu.set_mie(MIE_MTIE);
+
+        // Before interrupt is asserted, step executes normally
+        let step1 = cpu.step().unwrap();
+        assert_eq!(step1, CpuStepResult::Ok { cycles: 1 });
+        assert_eq!(cpu.pc().unwrap(), ram_base + 4);
+
+        // Assert timer interrupt
+        cpu.set_timer_interrupt(true);
+
+        // Next step should deliver trap
+        let step2 = cpu.step().unwrap();
+        assert_eq!(
+            step2,
+            CpuStepResult::Trap {
+                cause: MCAUSE_INTERRUPT_BIT | MCAUSE_MTI,
+                epc: ram_base + 4,
+            }
+        );
+        assert_eq!(cpu.pc().unwrap(), 0x8000_0800);
+        assert_eq!(cpu.mepc(), ram_base + 4);
+        assert_eq!(cpu.mcause(), MCAUSE_INTERRUPT_BIT | MCAUSE_MTI);
+        // MIE cleared, MPIE set
+        assert_eq!(cpu.mstatus() & MSTATUS_MIE, 0);
+        assert_ne!(cpu.mstatus() & MSTATUS_MPIE, 0);
+
+        // Clear timer interrupt and return from trap (mret)
+        cpu.set_timer_interrupt(false);
+        cpu.mret().unwrap();
+        assert_eq!(cpu.pc().unwrap(), ram_base + 4);
+        assert_ne!(cpu.mstatus() & MSTATUS_MIE, 0);
     }
 }
