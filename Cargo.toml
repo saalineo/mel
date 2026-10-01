@@ -44,4 +44,5 @@ serde_yaml = "0.9"
 clap = { version = "4.5", features = ["derive"] }
 unicorn-engine = "2.1"
 capstone = "0.12"
+fatfs = "0.3.6"
 

@@ -10,3 +10,4 @@ mel-core.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 tracing.workspace = true
+fatfs.workspace = true
