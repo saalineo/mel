@@ -66,6 +66,7 @@ pub fn create_disassembler(arch: Architecture) -> Result<Capstone, MelError> {
         Architecture::PowerIso64 => Capstone::new()
             .ppc()
             .mode(arch::ppc::ArchMode::Mode64)
+            .endian(capstone::Endian::Big)
             .detail(true)
             .build(),
     };
@@ -167,5 +168,14 @@ mod tests {
         assert_eq!(instructions.len(), 2);
         assert_eq!(instructions[0].mnemonic, "nop");
         assert_eq!(instructions[1].mnemonic, "ret");
+    }
+
+    #[test]
+    fn test_disassemble_power_iso64() {
+        // li r3, 42 (0x38, 0x60, 0x00, 0x2a)
+        let code: [u8; 4] = [0x38, 0x60, 0x00, 0x2a];
+        let instructions = disassemble(Architecture::PowerIso64, &code, 0x100).unwrap();
+        assert_eq!(instructions.len(), 1);
+        assert!(instructions[0].mnemonic == "li" || instructions[0].mnemonic == "addi");
     }
 }
