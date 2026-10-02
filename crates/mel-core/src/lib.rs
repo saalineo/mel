@@ -4,10 +4,12 @@
 
 pub mod arch;
 pub mod error;
+pub mod memory_maps;
 pub mod types;
 
 pub use arch::Architecture;
 pub use error::{BusError, CpuError, MelError, MelResult, MemoryError};
+pub use memory_maps::{ArchitectureMemoryMap, MemoryMapEntry};
 pub use types::{
     AccessType, Address, ByteCount, Endianness, Permissions, PhysicalAddress, RegisterId,
     RegisterValue, Size, VirtualAddress,
