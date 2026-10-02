@@ -1,0 +1,17 @@
+name: ppc64-virt
+description: Standard Power ISA 64-bit virtual machine
+architecture: powerpc64
+ram_size: 67108864
+ram_base: 0x00000000
+boot:
+  entry_point: 0x00000100
+  reset_vector: 0x00000100
+devices:
+  uart:
+    base: 0x10000000
+    size: 0x0100
+    irq: 1
+  block:
+    base: 0x20000000
+    size: 0x1000
+    irq: 2

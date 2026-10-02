@@ -5,11 +5,16 @@
 pub mod arch;
 pub mod error;
 pub mod memory_maps;
+pub mod profile;
 pub mod types;
 
 pub use arch::Architecture;
 pub use error::{BusError, CpuError, MelError, MelResult, MemoryError};
 pub use memory_maps::{ArchitectureMemoryMap, MemoryMapEntry};
+pub use profile::{
+    ApicDeviceConfig, BlockDeviceConfig, BootConfig, BootRomConfig, ClintDeviceConfig,
+    DevicesConfig, GicDeviceConfig, MachineProfile, PlicDeviceConfig, UartDeviceConfig,
+};
 pub use types::{
     AccessType, Address, ByteCount, Endianness, Permissions, PhysicalAddress, RegisterId,
     RegisterValue, Size, VirtualAddress,

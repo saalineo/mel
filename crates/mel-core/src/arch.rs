@@ -11,12 +11,16 @@ use std::str::FromStr;
 #[serde(rename_all = "snake_case")]
 pub enum Architecture {
     /// RISC-V 64-bit (RV64GC)
+    #[serde(alias = "riscv", alias = "rv64", alias = "riscv-64")]
     Riscv64,
     /// ARM 64-bit (AArch64 / ARMv8-A)
+    #[serde(alias = "aarch64", alias = "arm")]
     Arm64,
     /// x86 64-bit (AMD64 / x86-64)
+    #[serde(alias = "x86-64", alias = "x64", alias = "amd64")]
     X86_64,
     /// Power ISA 64-bit (PowerPC 64)
+    #[serde(alias = "powerpc64", alias = "powerpc", alias = "ppc64", alias = "powerisa", alias = "power")]
     PowerIso64,
 }
 

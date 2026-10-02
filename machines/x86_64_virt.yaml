@@ -1,0 +1,24 @@
+name: x86_64-virt
+description: Standard x86-64 PC-compatible virtual machine
+architecture: x86_64
+ram_size: 67108864
+ram_base: 0x00100000
+boot:
+  entry_point: 0x00100000
+  reset_vector: 0x00100000
+  rom:
+    base: 0x000F0000
+    size: 0x00010000
+devices:
+  uart:
+    base: 0x10000000
+    size: 0x0100
+    irq: 4
+    port_io: 0x03F8
+  apic:
+    base: 0xFEE00000
+    size: 0x1000
+  block:
+    base: 0x20000000
+    size: 0x1000
+    irq: 14
