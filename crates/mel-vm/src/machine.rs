@@ -294,9 +294,12 @@ impl VirtualMachine {
             }
         }
 
-        Ok(Snapshot::new(
+        let mut snapshot = Snapshot::new(
             self.arch, ram_base, cpu_state, ram_data, uart_state, rom_state, devices,
-        ))
+        );
+        snapshot.clock = Some(self.clock.clone());
+
+        Ok(snapshot)
     }
 
     /// Restore the virtual machine to the state captured in a snapshot.
@@ -346,6 +349,11 @@ impl VirtualMachine {
                     dev_guard.load_state(dev_data)?;
                 }
             }
+        }
+
+        // Restore Virtual Clock if present in snapshot
+        if let Some(clock) = &snapshot.clock {
+            self.clock = clock.clone();
         }
 
         Ok(())
