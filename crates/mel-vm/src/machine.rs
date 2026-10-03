@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use unicorn_engine::unicorn_const::Prot;
 
+use crate::clock::VirtualClock;
+
 /// Unified virtual machine representing a complete computer motherboard.
 pub struct VirtualMachine {
     arch: Architecture,
@@ -24,6 +26,7 @@ pub struct VirtualMachine {
     clint: Option<Arc<Mutex<Clint>>>,
     plic: Option<Arc<Mutex<Plic>>>,
     block: Option<Arc<Mutex<BlockDevice>>>,
+    clock: VirtualClock,
 }
 
 impl VirtualMachine {
@@ -52,12 +55,39 @@ impl VirtualMachine {
             clint,
             plic,
             block,
+            clock: VirtualClock::default(),
         }
+    }
+
+    /// Set a custom [`VirtualClock`] on the machine.
+    pub fn with_clock(mut self, clock: VirtualClock) -> Self {
+        self.clock = clock;
+        self
     }
 
     /// Machine target CPU architecture.
     pub fn arch(&self) -> Architecture {
         self.arch
+    }
+
+    /// Access the virtual clock.
+    pub fn clock(&self) -> &VirtualClock {
+        &self.clock
+    }
+
+    /// Mutable access to the virtual clock.
+    pub fn clock_mut(&mut self) -> &mut VirtualClock {
+        &mut self.clock
+    }
+
+    /// Total accumulated execution cycles.
+    pub fn cycle_count(&self) -> u64 {
+        self.clock.total_cycles()
+    }
+
+    /// Deterministic elapsed virtual wall-clock time in nanoseconds.
+    pub fn wall_time_ns(&self) -> u64 {
+        self.clock.wall_time_ns()
     }
 
     /// Advance the virtual machine by a single instruction step.
@@ -67,11 +97,8 @@ impl VirtualMachine {
             CpuStepResult::Ok { cycles } => cycles,
             _ => 1,
         };
-        for dev in &self.devices {
-            if let Ok(mut d) = dev.lock() {
-                let _ = d.tick(cycles);
-            }
-        }
+        self.clock.advance(cycles);
+        self.tick_devices(cycles);
         self.sync_interrupts();
         Ok(step_result)
     }
@@ -83,13 +110,19 @@ impl VirtualMachine {
             CpuStepResult::Ok { cycles } => cycles,
             _ => 1,
         };
+        self.clock.advance(cycles);
+        self.tick_devices(cycles);
+        self.sync_interrupts();
+        Ok(run_result)
+    }
+
+    /// Dispatch clock ticks to all attached MMIO devices.
+    pub fn tick_devices(&mut self, cycles: u64) {
         for dev in &self.devices {
             if let Ok(mut d) = dev.lock() {
                 let _ = d.tick(cycles);
             }
         }
-        self.sync_interrupts();
-        Ok(run_result)
     }
 
     /// Synchronize hardware interrupt lines across peripherals and CPU core.

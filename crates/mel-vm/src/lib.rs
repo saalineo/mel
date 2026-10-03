@@ -2,10 +2,12 @@
 //!
 //! Virtual motherboard composing CPU, system bus, memory, and MMIO peripherals into a single machine.
 
+pub mod clock;
 pub mod factory;
 pub mod machine;
 pub mod snapshot;
 
+pub use clock::{VirtualClock, DEFAULT_FREQUENCY_HZ};
 pub use factory::{
     build_vm_for_arch, build_vm_from_file, build_vm_from_profile, build_vm_from_yaml_str,
 };
