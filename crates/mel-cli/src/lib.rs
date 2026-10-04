@@ -10,18 +10,14 @@ use anyhow::{Context, Result};
 use mel_core::Architecture;
 use mel_debugger::{disassemble, format_hex_dump, Debugger, ReplSession};
 use mel_loader::load_raw_binary;
-use mel_vm::{create_basic_riscv64_vm, create_mock_vm, VirtualMachine};
+use mel_vm::VirtualMachine;
 
 pub use args::*;
 
 /// Build a virtual machine instance matching the requested architecture.
 pub fn build_vm_for_arch(arch: Architecture) -> Result<VirtualMachine> {
-    match arch {
-        Architecture::Riscv64 => {
-            create_basic_riscv64_vm().context("Failed to build basic RISC-V 64 virtual machine")
-        }
-        other => create_mock_vm(other).context(format!("Failed to build mock VM for {:?}", other)),
-    }
+    mel_vm::build_vm_for_arch(arch)
+        .with_context(|| format!("Failed to build virtual machine for {:?}", arch))
 }
 
 /// Execute the `mel run` subcommand.

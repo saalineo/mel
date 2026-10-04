@@ -450,6 +450,11 @@ pub fn create_basic_riscv64_vm() -> Result<VirtualMachine, MelError> {
     ))
 }
 
+/// Convenience constructor building a standard ARM64 (AArch64) virtual machine.
+pub fn create_basic_arm64_vm() -> Result<VirtualMachine, MelError> {
+    crate::factory::build_vm_for_arch(Architecture::Arm64)
+}
+
 /// Factory function building a lightweight mock virtual machine for unit testing.
 pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
     let mut bus = SystemBus::new();
