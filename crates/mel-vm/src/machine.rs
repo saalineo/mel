@@ -455,6 +455,11 @@ pub fn create_basic_arm64_vm() -> Result<VirtualMachine, MelError> {
     crate::factory::build_vm_for_arch(Architecture::Arm64)
 }
 
+/// Convenience constructor building a standard x86-64 virtual machine.
+pub fn create_basic_x86_64_vm() -> Result<VirtualMachine, MelError> {
+    crate::factory::build_vm_for_arch(Architecture::X86_64)
+}
+
 /// Factory function building a lightweight mock virtual machine for unit testing.
 pub fn create_mock_vm(arch: Architecture) -> Result<VirtualMachine, MelError> {
     let mut bus = SystemBus::new();
