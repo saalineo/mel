@@ -23,7 +23,7 @@ pub fn build_vm_for_arch(arch: Architecture) -> Result<VirtualMachine> {
 /// Execute the `mel run` subcommand.
 pub fn execute_run<W: Write>(args: &RunArgs, stdout: &mut W) -> Result<()> {
     let arch: Architecture = args.arch.into();
-    let entry_addr = args.entry.unwrap_or_else(|| arch.default_ram_base());
+    let entry_addr = args.entry.unwrap_or_else(|| arch.default_reset_vector());
 
     let payload = std::fs::read(&args.file)
         .with_context(|| format!("Failed to read binary payload from '{}'", args.file))?;
@@ -79,7 +79,7 @@ pub fn execute_debug<R: BufRead, W: Write>(
     mut writer: W,
 ) -> Result<()> {
     let arch: Architecture = args.arch.into();
-    let entry_addr = args.entry.unwrap_or_else(|| arch.default_ram_base());
+    let entry_addr = args.entry.unwrap_or_else(|| arch.default_reset_vector());
 
     let payload = std::fs::read(&args.file)
         .with_context(|| format!("Failed to read binary payload from '{}'", args.file))?;
@@ -101,7 +101,7 @@ pub fn execute_debug<R: BufRead, W: Write>(
 /// Execute the `mel inspect` subcommand.
 pub fn execute_inspect<W: Write>(args: &InspectArgs, stdout: &mut W) -> Result<()> {
     let arch: Architecture = args.arch.into();
-    let entry_addr = args.entry.unwrap_or_else(|| arch.default_ram_base());
+    let entry_addr = args.entry.unwrap_or_else(|| arch.default_reset_vector());
 
     let payload = std::fs::read(&args.file)
         .with_context(|| format!("Failed to read binary payload from '{}'", args.file))?;
