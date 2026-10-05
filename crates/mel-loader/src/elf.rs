@@ -505,6 +505,128 @@ impl ElfInfo {
     }
 }
 
+/// Summary of ELF binary loading into virtual machine memory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElfLoadSummary {
+    pub architecture: Architecture,
+    pub entry_point: Address,
+    pub segments_loaded: usize,
+    pub total_bytes_loaded: u64,
+    pub total_bss_zeroed: u64,
+    pub lowest_addr: Address,
+    pub highest_addr: Address,
+}
+
+/// Load an ELF64 binary into virtual machine memory, initialize BSS, and set the PC.
+pub fn load_elf(vm: &mut mel_vm::VirtualMachine, elf_bytes: &[u8]) -> Result<ElfLoadSummary, MelError> {
+    let info = ElfInfo::parse(elf_bytes)?;
+
+    if info.architecture != vm.arch() {
+        return Err(MelError::Loader(format!(
+            "Architecture mismatch: ELF binary is {}, VM is {}",
+            info.architecture,
+            vm.arch()
+        )));
+    }
+
+    let load_segments: Vec<_> = info.load_segments().collect();
+    if load_segments.is_empty() {
+        return Err(MelError::Loader(
+            "ELF binary contains no loadable (PT_LOAD) segments".into(),
+        ));
+    }
+
+    let mut segments_loaded = 0usize;
+    let mut total_bytes_loaded = 0u64;
+    let mut total_bss_zeroed = 0u64;
+    let mut lowest_addr = u64::MAX;
+    let mut highest_addr = 0u64;
+
+    for ph in &load_segments {
+        let target_addr = if ph.physical_addr != 0 {
+            ph.physical_addr
+        } else {
+            ph.virtual_addr
+        };
+
+        if ph.file_size > 0 {
+            let segment_bytes = ph.data(elf_bytes)?;
+            vm.write_memory(target_addr, segment_bytes)?;
+            total_bytes_loaded = total_bytes_loaded.checked_add(ph.file_size).ok_or_else(|| {
+                MelError::Loader("Overflow in total loaded bytes calculation".into())
+            })?;
+        }
+
+        let bss_size = ph.bss_size();
+        if bss_size > 0 {
+            let bss_addr = target_addr.checked_add(ph.file_size).ok_or_else(|| {
+                MelError::Loader(format!(
+                    "BSS address overflow at target address {target_addr:#x} file size {:#x}",
+                    ph.file_size
+                ))
+            })?;
+
+            let zero_buffer = vec![0u8; (bss_size.min(65536)) as usize];
+            let mut remaining = bss_size;
+            let mut cur_addr = bss_addr;
+
+            while remaining > 0 {
+                let chunk_size = (remaining.min(zero_buffer.len() as u64)) as usize;
+                vm.write_memory(cur_addr, &zero_buffer[..chunk_size])?;
+                cur_addr = cur_addr.checked_add(chunk_size as u64).ok_or_else(|| {
+                    MelError::Loader(format!("Address overflow while zeroing BSS at {cur_addr:#x}"))
+                })?;
+                remaining -= chunk_size as u64;
+            }
+
+            total_bss_zeroed = total_bss_zeroed.checked_add(bss_size).ok_or_else(|| {
+                MelError::Loader("Overflow in total zeroed BSS calculation".into())
+            })?;
+        }
+
+        let segment_mem_end = target_addr.checked_add(ph.mem_size).ok_or_else(|| {
+            MelError::Loader(format!(
+                "Segment memory range overflow at {target_addr:#x} size {:#x}",
+                ph.mem_size
+            ))
+        })?;
+
+        lowest_addr = lowest_addr.min(target_addr);
+        highest_addr = highest_addr.max(segment_mem_end);
+        segments_loaded += 1;
+    }
+
+    vm.set_pc(info.entry_point)?;
+
+    tracing::debug!(
+        "Loaded ELF64 ({}) into VM: {} segments, {} bytes code/data, {} bytes BSS, entry PC {:#x}",
+        info.architecture,
+        segments_loaded,
+        total_bytes_loaded,
+        total_bss_zeroed,
+        info.entry_point
+    );
+
+    Ok(ElfLoadSummary {
+        architecture: info.architecture,
+        entry_point: info.entry_point,
+        segments_loaded,
+        total_bytes_loaded,
+        total_bss_zeroed,
+        lowest_addr,
+        highest_addr,
+    })
+}
+
+/// Read and load an ELF64 binary file from disk into virtual machine memory.
+pub fn load_elf_from_file<P: AsRef<Path>>(
+    vm: &mut mel_vm::VirtualMachine,
+    path: P,
+) -> Result<ElfLoadSummary, MelError> {
+    let bytes = std::fs::read(path.as_ref())?;
+    load_elf(vm, &bytes)
+}
+
 /// Convenience function to parse ELF bytes into `ElfInfo`.
 pub fn parse_elf(bytes: &[u8]) -> Result<ElfInfo, MelError> {
     ElfInfo::parse(bytes)
