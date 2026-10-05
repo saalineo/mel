@@ -46,4 +46,6 @@ unicorn-engine = "2.1"
 capstone = "0.12"
 fatfs = "0.3.6"
 object = { version = "0.36", default-features = false, features = ["read", "write", "elf", "std"] }
+ratatui = "0.28"
+crossterm = "0.28"
 

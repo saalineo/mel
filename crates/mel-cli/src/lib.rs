@@ -3,6 +3,7 @@
 //! Exposes command handlers and execution logic for the MEL CLI interface.
 
 pub mod args;
+pub mod tui;
 
 use std::io::{BufRead, Write};
 
