@@ -109,6 +109,14 @@ impl ReplSession {
         &mut self.debugger
     }
 
+    /// Resolve address or symbol name.
+    fn resolve_addr_or_symbol(&self, token: &str) -> MelResult<Address> {
+        if let Some(sym) = self.debugger.symbols().find_by_name(token) {
+            return Ok(sym.address);
+        }
+        parse_number(token)
+    }
+
     /// Parse a raw input string into a structured `ReplCommand`.
     pub fn parse_command(&self, input: &str) -> MelResult<ReplCommand> {
         let trimmed = input.trim();
@@ -133,10 +141,10 @@ impl ReplSession {
             "m" | "mem" | "memory" | "x" | "examine" => {
                 if tokens.len() < 2 {
                     return Err(MelError::Debugger(
-                        "Usage: mem <addr> [len]  (e.g., mem 0x80000000 64)".to_string(),
+                        "Usage: mem <addr|symbol> [len]  (e.g., mem 0x80000000 64 or mem main)".to_string(),
                     ));
                 }
-                let addr = parse_number(tokens[1])?;
+                let addr = self.resolve_addr_or_symbol(tokens[1])?;
                 let len = if tokens.len() > 2 {
                     parse_number(tokens[2])? as usize
                 } else {
@@ -151,14 +159,14 @@ impl ReplSession {
                         if tokens[1].eq_ignore_ascii_case("pc") {
                             (None, 5)
                         } else {
-                            (Some(parse_number(tokens[1])?), 5)
+                            (Some(self.resolve_addr_or_symbol(tokens[1])?), 5)
                         }
                     }
                     _ => {
                         let a = if tokens[1].eq_ignore_ascii_case("pc") {
                             None
                         } else {
-                            Some(parse_number(tokens[1])?)
+                            Some(self.resolve_addr_or_symbol(tokens[1])?)
                         };
                         let c = parse_number(tokens[2])? as usize;
                         (a, c)
@@ -169,19 +177,19 @@ impl ReplSession {
             "b" | "break" | "bp" => {
                 if tokens.len() < 2 {
                     return Err(MelError::Debugger(
-                        "Usage: break <addr>  (e.g., break 0x80000000)".to_string(),
+                        "Usage: break <addr|symbol>  (e.g., break 0x80000000 or break main)".to_string(),
                     ));
                 }
-                let addr = parse_number(tokens[1])?;
+                let addr = self.resolve_addr_or_symbol(tokens[1])?;
                 Ok(ReplCommand::Break { addr })
             }
             "tb" | "tbreak" => {
                 if tokens.len() < 2 {
                     return Err(MelError::Debugger(
-                        "Usage: tbreak <addr>  (e.g., tbreak 0x80000000)".to_string(),
+                        "Usage: tbreak <addr|symbol>  (e.g., tbreak 0x80000000 or tbreak main)".to_string(),
                     ));
                 }
-                let addr = parse_number(tokens[1])?;
+                let addr = self.resolve_addr_or_symbol(tokens[1])?;
                 Ok(ReplCommand::TempBreak { addr })
             }
             "w" | "watch" => {
@@ -915,5 +923,42 @@ mod tests {
         assert!(output_str.contains("Architecture: Riscv64"));
         assert!(output_str.contains("MEL Debugger Command Reference"));
         assert!(output_str.contains("Exiting MEL debugger."));
+    }
+
+    #[test]
+    fn test_repl_symbol_resolution() {
+        let vm = create_mock_vm(Architecture::Riscv64).unwrap();
+        let mut dbg = Debugger::new(vm);
+
+        let mut symtab = mel_loader::SymbolTable::new();
+        symtab.add_symbol(mel_loader::ElfSymbol {
+            name: "target_handler".to_string(),
+            address: 0x8000_0050,
+            size: 0x20,
+            kind: mel_loader::SymbolKind::Function,
+            binding: mel_loader::SymbolBinding::Global,
+            section_index: Some(1),
+        });
+        dbg.set_symbols(symtab);
+
+        let mut session = ReplSession::new(dbg);
+
+        // Break at symbol name
+        let out_bp = session.eval_line("break target_handler").unwrap();
+        assert!(out_bp.text.contains("Breakpoint #1 set at 0x80000050"));
+
+        // Temp break at symbol name
+        let out_tbp = session.eval_line("tbreak target_handler").unwrap();
+        assert!(out_tbp.text.contains("Temporary breakpoint #2 set at 0x80000050"));
+
+        // Disasm at symbol name
+        let cmd = session.parse_command("disasm target_handler 4").unwrap();
+        assert_eq!(
+            cmd,
+            ReplCommand::Disassemble {
+                addr: Some(0x8000_0050),
+                count: 4
+            }
+        );
     }
 }

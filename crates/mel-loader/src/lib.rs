@@ -4,6 +4,7 @@
 
 pub mod elf;
 pub mod raw;
+pub mod symbols;
 
 pub use elf::{
     load_elf, load_elf_from_file, parse_elf, parse_elf_file, ElfInfo, ElfLoadSummary,
@@ -11,3 +12,4 @@ pub use elf::{
 };
 pub use mel_core::{Address, MelError, MelResult};
 pub use raw::{load_raw_binary, load_raw_binary_from_file};
+pub use symbols::{ElfSymbol, SymbolBinding, SymbolKind, SymbolTable};

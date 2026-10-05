@@ -14,4 +14,5 @@ pub use breakpoints::{
 pub use debugger::Debugger;
 pub use disasm::{create_disassembler, disassemble, DisassembledInstruction};
 pub use mel_core::{Address, Architecture, MelError, MelResult, RegisterId};
+pub use mel_loader::{ElfSymbol, SymbolBinding, SymbolKind, SymbolTable};
 pub use repl::{format_hex_dump, parse_number, ReplAction, ReplCommand, ReplOutput, ReplSession};

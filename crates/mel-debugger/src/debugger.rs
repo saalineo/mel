@@ -1,7 +1,6 @@
-//! Unified debugger runtime tying VirtualMachine, breakpoints, disassembly, and execution control.
-
 use mel_core::{Address, Architecture, MelResult, RegisterId};
 use mel_cpu::traits::CpuStepResult;
+use mel_loader::{ElfSymbol, SymbolTable};
 use mel_vm::VirtualMachine;
 
 use crate::breakpoints::{
@@ -14,6 +13,7 @@ use crate::disasm::{disassemble, DisassembledInstruction};
 pub struct Debugger {
     vm: VirtualMachine,
     breakpoints: BreakpointManager,
+    symbols: SymbolTable,
     last_stop_reason: Option<DebugStopReason>,
 }
 
@@ -23,8 +23,52 @@ impl Debugger {
         Self {
             vm,
             breakpoints: BreakpointManager::new(),
+            symbols: SymbolTable::new(),
             last_stop_reason: None,
         }
+    }
+
+    /// Create a new debugger with an attached symbol table.
+    pub fn with_symbols(vm: VirtualMachine, symbols: SymbolTable) -> Self {
+        Self {
+            vm,
+            breakpoints: BreakpointManager::new(),
+            symbols,
+            last_stop_reason: None,
+        }
+    }
+
+    /// Access reference to the symbol table.
+    pub fn symbols(&self) -> &SymbolTable {
+        &self.symbols
+    }
+
+    /// Access mutable reference to the symbol table.
+    pub fn symbols_mut(&mut self) -> &mut SymbolTable {
+        &mut self.symbols
+    }
+
+    /// Set or replace the symbol table.
+    pub fn set_symbols(&mut self, symbols: SymbolTable) {
+        self.symbols = symbols;
+    }
+
+    /// Load and parse symbols from an ELF binary byte slice.
+    pub fn load_symbols(&mut self, elf_bytes: &[u8]) -> MelResult<usize> {
+        let symtab = SymbolTable::parse(elf_bytes)?;
+        let count = symtab.len();
+        self.symbols = symtab;
+        Ok(count)
+    }
+
+    /// Resolve address to nearest symbol and offset.
+    pub fn resolve_symbol(&self, addr: Address) -> Option<(&ElfSymbol, u64)> {
+        self.symbols.resolve_address(addr)
+    }
+
+    /// Format address with symbolic annotation.
+    pub fn format_address(&self, addr: Address) -> String {
+        self.symbols.format_address(addr)
     }
 
     /// Access reference to the virtual machine.
@@ -422,5 +466,41 @@ mod tests {
 
         let uart_out = dbg.vm().uart().unwrap().lock().unwrap().drain_output();
         assert_eq!(uart_out, b"X");
+    }
+
+    #[test]
+    fn test_debugger_symbol_table_integration() {
+        let vm = create_mock_vm(Architecture::Riscv64).unwrap();
+        let mut dbg = Debugger::new(vm);
+
+        let mut symtab = SymbolTable::new();
+        symtab.add_symbol(ElfSymbol {
+            name: "kmain".to_string(),
+            address: 0x8000_0000,
+            size: 0x40,
+            kind: mel_loader::SymbolKind::Function,
+            binding: mel_loader::SymbolBinding::Global,
+            section_index: Some(1),
+        });
+        symtab.add_symbol(ElfSymbol {
+            name: "uart_init".to_string(),
+            address: 0x8000_0040,
+            size: 0x20,
+            kind: mel_loader::SymbolKind::Function,
+            binding: mel_loader::SymbolBinding::Global,
+            section_index: Some(1),
+        });
+
+        dbg.set_symbols(symtab);
+        assert_eq!(dbg.symbols().len(), 2);
+        assert_eq!(dbg.format_address(0x8000_0000), "kmain");
+        assert_eq!(dbg.format_address(0x8000_0008), "kmain+0x8");
+        assert_eq!(dbg.format_address(0x8000_0040), "uart_init");
+        assert_eq!(dbg.format_address(0x8000_0050), "uart_init+0x10");
+        assert_eq!(dbg.format_address(0x8000_1000), "0x80001000");
+
+        let (sym, offset) = dbg.resolve_symbol(0x8000_000c).unwrap();
+        assert_eq!(sym.name, "kmain");
+        assert_eq!(offset, 0xc);
     }
 }

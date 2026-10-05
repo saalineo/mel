@@ -11,6 +11,7 @@ mel-cpu.workspace = true
 mel-bus.workspace = true
 mel-memory.workspace = true
 mel-vm.workspace = true
+mel-loader.workspace = true
 capstone.workspace = true
 thiserror.workspace = true
 serde.workspace = true
