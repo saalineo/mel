@@ -7,6 +7,9 @@ authors.workspace = true
 
 [dependencies]
 mel-core.workspace = true
+mel-cpu.workspace = true
+mel-loader.workspace = true
+mel-vm.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
