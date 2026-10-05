@@ -2,6 +2,7 @@
 //!
 //! Challenge scenarios, objective parsing, validation, and auto-grading engine.
 
-pub use mel_core::{MelError, MelResult};
+pub mod schema;
 
-pub struct Scenario;
+pub use mel_core::{Address, Architecture, MelError, MelResult};
+pub use schema::{Constraint, Objective, Scenario};
