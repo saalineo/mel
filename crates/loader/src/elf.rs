@@ -1,9 +1,9 @@
 //! ELF64 binary header parser and metadata extraction.
 
 use mel_core::{Address, Architecture, Endianness, MelError, Permissions};
+use object::Endianness as ObjEndianness;
 use object::elf;
 use object::read::elf::{ElfFile64, FileHeader, ProgramHeader, SectionHeader};
-use object::Endianness as ObjEndianness;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::Range;
@@ -407,7 +407,7 @@ impl ElfInfo {
             other => {
                 return Err(MelError::Loader(format!(
                     "Invalid ELF data encoding: {other}"
-                )))
+                )));
             }
         };
 
@@ -424,7 +424,7 @@ impl ElfInfo {
             other => {
                 return Err(MelError::Loader(format!(
                     "Unsupported ELF e_machine architecture: {other:#x} (supported: EM_RISCV, EM_AARCH64, EM_X86_64, EM_PPC64)"
-                )))
+                )));
             }
         };
 

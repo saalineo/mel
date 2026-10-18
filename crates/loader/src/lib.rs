@@ -7,8 +7,8 @@ pub mod raw;
 pub mod symbols;
 
 pub use elf::{
-    load_elf, load_elf_from_file, parse_elf, parse_elf_file, ElfInfo, ElfLoadSummary,
-    ElfProgramHeader, ElfSectionHeader, ElfType, SectionType, SegmentFlags, SegmentType,
+    ElfInfo, ElfLoadSummary, ElfProgramHeader, ElfSectionHeader, ElfType, SectionType,
+    SegmentFlags, SegmentType, load_elf, load_elf_from_file, parse_elf, parse_elf_file,
 };
 pub use mel_core::{Address, MelError, MelResult};
 pub use raw::{load_raw_binary, load_raw_binary_from_file};

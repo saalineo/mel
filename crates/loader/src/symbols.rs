@@ -1,9 +1,9 @@
 //! ELF symbol table extraction and address/symbol resolution.
 
 use mel_core::{Address, MelError};
+use object::Endianness as ObjEndianness;
 use object::elf;
 use object::read::elf::{ElfFile64, SectionHeader, Sym};
-use object::Endianness as ObjEndianness;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -187,7 +187,7 @@ impl SymbolTable {
             other => {
                 return Err(MelError::Loader(format!(
                     "Invalid ELF data encoding: {other}"
-                )))
+                )));
             }
         };
 
@@ -339,11 +339,7 @@ impl SymbolTable {
                 .iter()
                 .find_map(|&idx| {
                     let sym = &self.symbols[idx];
-                    if sym.is_function() {
-                        Some(sym)
-                    } else {
-                        None
-                    }
+                    if sym.is_function() { Some(sym) } else { None }
                 })
                 .or_else(|| indices.first().map(|&idx| &self.symbols[idx]))
         })
