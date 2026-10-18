@@ -1,10 +1,11 @@
 #![allow(clippy::useless_conversion)]
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use mel_core::RegisterId;
 use mel_loader::load_raw_binary;
 use mel_vm::{
-    create_basic_arm64_vm, create_basic_powerpc64_vm, create_basic_riscv64_vm,
-    create_basic_x86_64_vm, VirtualMachine,
+    VirtualMachine, create_basic_arm64_vm, create_basic_powerpc64_vm, create_basic_riscv64_vm,
+    create_basic_x86_64_vm,
 };
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
