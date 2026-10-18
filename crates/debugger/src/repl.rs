@@ -216,7 +216,7 @@ impl ReplSession {
                         other => {
                             return Err(MelError::Debugger(format!(
                                 "Unknown watchpoint access kind '{other}'. Use 'r', 'w', or 'rw'"
-                            )))
+                            )));
                         }
                     }
                 } else {
@@ -367,10 +367,10 @@ impl ReplSession {
                 let mut out = format_stop_reason(&last_stop, pc);
 
                 // Disassemble next instruction for context
-                if let Ok(insns) = self.debugger.disassemble_current(1) {
-                    if let Some(insn) = insns.first() {
-                        out.push_str(&format!("\n=> {}", insn.format_line()));
-                    }
+                if let Ok(insns) = self.debugger.disassemble_current(1)
+                    && let Some(insn) = insns.first()
+                {
+                    out.push_str(&format!("\n=> {}", insn.format_line()));
                 }
 
                 Ok(ReplOutput::ok(out))
@@ -380,10 +380,10 @@ impl ReplSession {
                 let pc = self.debugger.pc()?;
                 let mut out = format_stop_reason(&stop, pc);
 
-                if let Ok(insns) = self.debugger.disassemble_current(1) {
-                    if let Some(insn) = insns.first() {
-                        out.push_str(&format!("\n=> {}", insn.format_line()));
-                    }
+                if let Ok(insns) = self.debugger.disassemble_current(1)
+                    && let Some(insn) = insns.first()
+                {
+                    out.push_str(&format!("\n=> {}", insn.format_line()));
                 }
 
                 Ok(ReplOutput::ok(out))
@@ -512,9 +512,7 @@ fn format_stop_reason(reason: &DebugStopReason, pc: Address) -> String {
             id,
             address,
             hit_count,
-        } => format!(
-            "Hit breakpoint #{id} at {address:#010x} (hit count: {hit_count})"
-        ),
+        } => format!("Hit breakpoint #{id} at {address:#010x} (hit count: {hit_count})"),
         DebugStopReason::Watchpoint {
             id,
             address,
@@ -952,9 +950,11 @@ mod tests {
 
         // Temp break at symbol name
         let out_tbp = session.eval_line("tbreak target_handler").unwrap();
-        assert!(out_tbp
-            .text
-            .contains("Temporary breakpoint #2 set at 0x80000050"));
+        assert!(
+            out_tbp
+                .text
+                .contains("Temporary breakpoint #2 set at 0x80000050")
+        );
 
         // Disasm at symbol name
         let cmd = session.parse_command("disasm target_handler 4").unwrap();

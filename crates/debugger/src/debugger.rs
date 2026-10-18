@@ -7,7 +7,7 @@ use crate::breakpoints::{
     Breakpoint, BreakpointCondition, BreakpointHit, BreakpointManager, DebugStopReason, Watchpoint,
     WatchpointKind,
 };
-use crate::disasm::{disassemble, DisassembledInstruction};
+use crate::disasm::{DisassembledInstruction, disassemble};
 
 /// Interactive and programmatic debugger session manager.
 pub struct Debugger {

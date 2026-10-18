@@ -14,11 +14,11 @@ pub use breakpoints::{
     WatchpointKind,
 };
 pub use debugger::Debugger;
-pub use disasm::{create_disassembler, disassemble, DisassembledInstruction};
+pub use disasm::{DisassembledInstruction, create_disassembler, disassemble};
 pub use mel_core::{Address, Architecture, MelError, MelResult, RegisterId};
 pub use mel_loader::{ElfSymbol, SymbolBinding, SymbolKind, SymbolTable};
 pub use mmu::{MmuInspector, TranslationResult};
-pub use repl::{format_hex_dump, parse_number, ReplAction, ReplCommand, ReplOutput, ReplSession};
+pub use repl::{ReplAction, ReplCommand, ReplOutput, ReplSession, format_hex_dump, parse_number};
 pub use sv39::{
     PageSize, PageTableEntry, PteFlags, Satp, Sv39Fault, Sv39Translation, Sv39Validator,
 };
