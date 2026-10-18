@@ -20,8 +20,8 @@ use mel_debugger::{Debugger, MmuInspector, ReplSession, Sv39Validator};
 use mel_loader::load_raw_binary;
 use mel_scenarios::compiler_challenge::{CompilerChallenge, Expr};
 use mel_scenarios::schema::Scenario;
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 use std::fs;
 use std::path::{Path, PathBuf};
 

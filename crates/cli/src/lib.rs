@@ -11,7 +11,7 @@ use std::io::{BufRead, Write};
 
 use anyhow::{Context, Result};
 use mel_core::Architecture;
-use mel_debugger::{disassemble, format_hex_dump, Debugger, ReplSession};
+use mel_debugger::{Debugger, ReplSession, disassemble, format_hex_dump};
 use mel_loader::load_raw_binary;
 use mel_vm::VirtualMachine;
 
@@ -48,17 +48,17 @@ pub fn execute_run<W: Write>(args: &RunArgs, stdout: &mut W) -> Result<()> {
         .with_context(|| "Execution failure during VM run")?;
 
     // Drain and display UART output if available
-    if let Some(uart_arc) = vm.uart() {
-        if let Ok(mut uart) = uart_arc.lock() {
-            let output = uart.drain_output();
-            if !output.is_empty() {
-                if !args.quiet {
-                    writeln!(stdout, "[UART Console Output]:")?;
-                }
-                stdout.write_all(&output)?;
-                if !output.ends_with(b"\n") {
-                    writeln!(stdout)?;
-                }
+    if let Some(uart_arc) = vm.uart()
+        && let Ok(mut uart) = uart_arc.lock()
+    {
+        let output = uart.drain_output();
+        if !output.is_empty() {
+            if !args.quiet {
+                writeln!(stdout, "[UART Console Output]:")?;
+            }
+            stdout.write_all(&output)?;
+            if !output.ends_with(b"\n") {
+                writeln!(stdout)?;
             }
         }
     }

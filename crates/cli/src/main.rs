@@ -1,7 +1,7 @@
 use clap::Parser;
 use mel_cli::{
-    execute_debug, execute_inspect, execute_machine, execute_run, execute_test_scenarios, Cli,
-    Commands,
+    Cli, Commands, execute_debug, execute_inspect, execute_machine, execute_run,
+    execute_test_scenarios,
 };
 
 fn main() -> anyhow::Result<()> {

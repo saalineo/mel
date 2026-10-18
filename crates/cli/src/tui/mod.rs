@@ -9,9 +9,9 @@ pub mod terminal;
 
 pub use app::{App, FocusedPane};
 pub use disasm::{DisasmLine, DisasmState, DisasmWidget};
-pub use layout::{render_layout_skeleton, TuiLayout};
-pub use memory::{MemoryViewerState, MemoryViewerWidget, BYTES_PER_ROW};
+pub use layout::{TuiLayout, render_layout_skeleton};
+pub use memory::{BYTES_PER_ROW, MemoryViewerState, MemoryViewerWidget};
 pub use registers::{
     DecodedFlag, RegisterEntry, RegisterSnapshot, RegisterTracker, RegisterWidget,
 };
-pub use terminal::{key_event_to_uart_bytes, TerminalCell, TerminalState, TerminalWidget};
+pub use terminal::{TerminalCell, TerminalState, TerminalWidget, key_event_to_uart_bytes};

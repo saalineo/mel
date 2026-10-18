@@ -4,12 +4,12 @@
 //! address offset navigation, address jumping (`goto`), and pattern searching.
 
 use mel_core::Address;
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Widget};
-use ratatui::Frame;
 
 /// Row width in bytes for standard hex dumps.
 pub const BYTES_PER_ROW: usize = 16;
@@ -355,8 +355,8 @@ impl Widget for MemoryViewerWidget<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn test_memory_viewer_initialization_and_alignment() {

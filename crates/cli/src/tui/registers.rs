@@ -7,12 +7,12 @@ use std::collections::HashMap;
 
 use mel_core::{Architecture, RegisterId};
 use mel_vm::VirtualMachine;
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Widget};
-use ratatui::Frame;
 
 /// Architectural register definition with canonical name and optional ABI alias.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -594,8 +594,8 @@ impl Widget for RegisterWidget<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn test_register_definitions_all_architectures() {

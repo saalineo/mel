@@ -3,11 +3,11 @@
 //! Partitions terminal screens into four primary diagnostic panels and an
 //! interactive command / hotkey control bar.
 
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
-use ratatui::Frame;
 
 /// Computed geometry for all panels in the MEL TUI interface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -170,8 +170,8 @@ pub fn render_layout_skeleton(frame: &mut Frame, layout: &TuiLayout) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn test_layout_computation_standard_terminal() {

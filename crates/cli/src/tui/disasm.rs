@@ -6,14 +6,14 @@
 use std::collections::HashSet;
 
 use mel_core::{Address, Architecture};
-use mel_debugger::{disassemble, DisassembledInstruction};
+use mel_debugger::{DisassembledInstruction, disassemble};
 use mel_loader::SymbolTable;
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Widget};
-use ratatui::Frame;
 
 /// Single line in the disassembly listing.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -337,8 +337,8 @@ impl Widget for DisasmWidget<'_> {
 mod tests {
     use super::*;
     use mel_loader::{ElfSymbol, SymbolBinding, SymbolKind};
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn sample_instructions() -> Vec<DisassembledInstruction> {
         vec![

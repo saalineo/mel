@@ -4,8 +4,8 @@ use mel_core::Architecture;
 use mel_debugger::{Debugger, ReplSession};
 use mel_loader::load_raw_binary;
 use mel_vm::build_vm_for_arch;
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 
 fn mk_key(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
     KeyEvent {
@@ -80,32 +80,35 @@ fn test_breakpoint_toggle_hotkey_f9() {
     let mut app = create_test_app();
     let pc = app.repl.debugger().vm().pc().unwrap();
 
-    assert!(app
-        .repl
-        .debugger()
-        .breakpoints()
-        .get_breakpoint_at(pc)
-        .is_none());
+    assert!(
+        app.repl
+            .debugger()
+            .breakpoints()
+            .get_breakpoint_at(pc)
+            .is_none()
+    );
 
     // Toggle on: F9
     app.handle_key(mk_key(KeyCode::F(9), KeyModifiers::NONE));
-    assert!(app
-        .repl
-        .debugger()
-        .breakpoints()
-        .get_breakpoint_at(pc)
-        .is_some());
+    assert!(
+        app.repl
+            .debugger()
+            .breakpoints()
+            .get_breakpoint_at(pc)
+            .is_some()
+    );
     assert!(app.status_message.contains("Set breakpoint"));
     assert!(app.disasm_state.breakpoints.contains(&pc));
 
     // Toggle off: F9
     app.handle_key(mk_key(KeyCode::F(9), KeyModifiers::NONE));
-    assert!(app
-        .repl
-        .debugger()
-        .breakpoints()
-        .get_breakpoint_at(pc)
-        .is_none());
+    assert!(
+        app.repl
+            .debugger()
+            .breakpoints()
+            .get_breakpoint_at(pc)
+            .is_none()
+    );
     assert!(app.status_message.contains("Removed"));
     assert!(!app.disasm_state.breakpoints.contains(&pc));
 }

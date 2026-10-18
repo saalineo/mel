@@ -1,7 +1,7 @@
 use clap::Parser;
 use mel_cli::{
-    execute_debug, execute_inspect, execute_machine, execute_run, ArchArg, Cli, Commands,
-    DebugArgs, InspectArgs, MachineArgs, MachineSubcommand, RunArgs,
+    ArchArg, Cli, Commands, DebugArgs, InspectArgs, MachineArgs, MachineSubcommand, RunArgs,
+    execute_debug, execute_inspect, execute_machine, execute_run,
 };
 
 #[test]

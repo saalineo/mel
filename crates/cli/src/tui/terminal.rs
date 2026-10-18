@@ -334,11 +334,7 @@ impl Perform for TerminalState {
         };
         let get_nonzero_param = |idx: usize, default_val: u16| -> u16 {
             let val = get_param(idx, default_val);
-            if val == 0 {
-                default_val
-            } else {
-                val
-            }
+            if val == 0 { default_val } else { val }
         };
 
         match action {
@@ -555,22 +551,22 @@ impl Perform for TerminalState {
 /// Convert an interactive Crossterm `KeyEvent` into corresponding serial UART bytes.
 pub fn key_event_to_uart_bytes(key: KeyEvent) -> Vec<u8> {
     // Check Ctrl combinations
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        if let KeyCode::Char(c) = key.code {
-            let upper = c.to_ascii_uppercase();
-            if upper.is_ascii_alphabetic() {
-                // Ctrl+A = 1, Ctrl+B = 2, ..., Ctrl+Z = 26
-                return vec![(upper as u8) - b'A' + 1];
-            } else {
-                match c {
-                    '@' | ' ' => return vec![0],
-                    '[' => return vec![0x1b],
-                    '\\' => return vec![0x1c],
-                    ']' => return vec![0x1d],
-                    '^' => return vec![0x1e],
-                    '_' => return vec![0x1f],
-                    _ => {}
-                }
+    if key.modifiers.contains(KeyModifiers::CONTROL)
+        && let KeyCode::Char(c) = key.code
+    {
+        let upper = c.to_ascii_uppercase();
+        if upper.is_ascii_alphabetic() {
+            // Ctrl+A = 1, Ctrl+B = 2, ..., Ctrl+Z = 26
+            return vec![(upper as u8) - b'A' + 1];
+        } else {
+            match c {
+                '@' | ' ' => return vec![0],
+                '[' => return vec![0x1b],
+                '\\' => return vec![0x1c],
+                ']' => return vec![0x1d],
+                '^' => return vec![0x1e],
+                '_' => return vec![0x1f],
+                _ => {}
             }
         }
     }
@@ -718,8 +714,8 @@ impl<'a> Widget for TerminalWidget<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn test_plain_text_and_cursor_advance() {

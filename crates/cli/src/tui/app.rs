@@ -9,11 +9,11 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use mel_core::Address;
 use mel_debugger::breakpoints::DebugStopReason;
 use mel_debugger::{ReplAction, ReplSession};
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
-use ratatui::Frame;
 
 use crate::tui::disasm::{DisasmState, DisasmWidget};
 use crate::tui::layout::TuiLayout;
@@ -162,10 +162,10 @@ impl App {
             .read_memory(base, &mut self.memory_buffer);
 
         // 4. Synchronize UART Output
-        if let Some(uart_arc) = self.repl.debugger().vm().uart() {
-            if let Ok(mut uart) = uart_arc.lock() {
-                self.terminal_state.sync_from_uart(&mut uart);
-            }
+        if let Some(uart_arc) = self.repl.debugger().vm().uart()
+            && let Ok(mut uart) = uart_arc.lock()
+        {
+            self.terminal_state.sync_from_uart(&mut uart);
         }
     }
 
@@ -307,10 +307,10 @@ impl App {
     }
 
     fn handle_uart_key(&mut self, key: KeyEvent) {
-        if let Some(uart_arc) = self.repl.debugger_mut().vm_mut().uart() {
-            if let Ok(mut uart) = uart_arc.lock() {
-                self.terminal_state.forward_key_to_uart(key, &mut uart);
-            }
+        if let Some(uart_arc) = self.repl.debugger_mut().vm_mut().uart()
+            && let Ok(mut uart) = uart_arc.lock()
+        {
+            self.terminal_state.forward_key_to_uart(key, &mut uart);
         }
     }
 
@@ -475,10 +475,10 @@ impl App {
             self.sync_state();
         } else {
             // Drain UART even when paused
-            if let Some(uart_arc) = self.repl.debugger().vm().uart() {
-                if let Ok(mut uart) = uart_arc.lock() {
-                    self.terminal_state.sync_from_uart(&mut uart);
-                }
+            if let Some(uart_arc) = self.repl.debugger().vm().uart()
+                && let Ok(mut uart) = uart_arc.lock()
+            {
+                self.terminal_state.sync_from_uart(&mut uart);
             }
         }
     }
@@ -608,10 +608,10 @@ impl App {
                 .checked_sub(last_tick.elapsed())
                 .unwrap_or_else(|| Duration::from_secs(0));
 
-            if crossterm::event::poll(timeout)? {
-                if let Event::Key(key) = crossterm::event::read()? {
-                    self.handle_key(key);
-                }
+            if crossterm::event::poll(timeout)?
+                && let Event::Key(key) = crossterm::event::read()?
+            {
+                self.handle_key(key);
             }
 
             if last_tick.elapsed() >= tick_rate {
