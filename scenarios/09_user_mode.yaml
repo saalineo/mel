@@ -1,0 +1,25 @@
+id: "scenario_09_user_mode"
+name: "User-Mode Execution & Syscall Handler"
+description: "Drop privilege to User-Mode (U-mode), invoke ECALL syscall (SYS_WRITE), and service via kernel trap vector."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "uart_output_contains"
+    expected: "USER_OK\n"
+    description: "Syscall SYS_WRITE prints 'USER_OK\n' to UART"
+  - type: "register_equals"
+    register: "a0"
+    value: 0
+    description: "Syscall returns 0 (success) in a0"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

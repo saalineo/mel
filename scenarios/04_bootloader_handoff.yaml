@@ -1,0 +1,26 @@
+id: "scenario_04_bootloader_handoff"
+name: "Bootloader Stage 1 Handoff"
+description: "Relocate Stage 2 payload into RAM at 0x80004000 and transfer execution control."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "memory_contains"
+    address: 0x80004000
+    expected_bytes: [0x13, 0x05, 0xa0, 0x02]
+    description: "Payload copied to target address 0x80004000"
+  - type: "register_equals"
+    register: "a0"
+    value: 42
+    description: "Stage 2 execution verified with a0 == 42"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

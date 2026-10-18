@@ -366,9 +366,10 @@ architecture: "arm64"
 objectives: []
 "#;
         let err = Scenario::from_yaml_str(yaml).unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("at least one verification objective"));
+        assert!(
+            err.to_string()
+                .contains("at least one verification objective")
+        );
     }
 
     #[test]

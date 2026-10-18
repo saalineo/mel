@@ -1,0 +1,26 @@
+id: "scenario_07_context_switch"
+name: "Cooperative Context Switcher"
+description: "Save task context (callee-saved registers and stack pointer), switch task stack, and restore new task execution state."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "register_equals"
+    register: "a0"
+    value: 0xbbbb
+    description: "Task B active with marker 0xBBBB in a0"
+  - type: "register_equals"
+    register: "sp"
+    value: 0x80020000
+    description: "Stack pointer switched to Task B stack at 0x80020000"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

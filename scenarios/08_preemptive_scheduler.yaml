@@ -1,0 +1,26 @@
+id: "scenario_08_preemptive_scheduler"
+name: "Preemptive Timer-Driven Scheduler"
+description: "Implement a preemptive round-robin scheduler driven by CLINT timer interrupts across 3 concurrent threads."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "register_equals"
+    register: "a0"
+    value: 3
+    description: "All 3 threads preemptively scheduled and verified (a0 == 3)"
+  - type: "memory_contains"
+    address: 0x80003000
+    expected_bytes: [0x01, 0x01, 0x01]
+    description: "Task execution status bitmap shows tasks 1, 2, and 3 active"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

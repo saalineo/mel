@@ -29,11 +29,7 @@ impl Expr {
             Self::Mul(lhs, rhs) => lhs.eval() * rhs.eval(),
             Self::Div(lhs, rhs) => {
                 let r = rhs.eval();
-                if r == 0 {
-                    0
-                } else {
-                    lhs.eval() / r
-                }
+                if r == 0 { 0 } else { lhs.eval() / r }
             }
             Self::IfElse {
                 cond,

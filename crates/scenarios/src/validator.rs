@@ -2,8 +2,8 @@
 
 use mel_core::{MelError, RegisterId};
 use mel_cpu::traits::CpuStepResult;
-use mel_vm::factory::build_vm_for_arch;
 use mel_vm::VirtualMachine;
+use mel_vm::factory::build_vm_for_arch;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::{Objective, Scenario};

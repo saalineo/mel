@@ -1,0 +1,21 @@
+id: "scenario_02_uart_driver"
+name: "UART Character & String Output"
+description: "Transmit 'MEL_BOOT_OK\n' to UART 16550 MMIO controller at 0x10000000."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 200
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "uart_output_contains"
+    expected: "MEL_BOOT_OK\n"
+    description: "UART output contains 'MEL_BOOT_OK\n'"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

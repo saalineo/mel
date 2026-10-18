@@ -1,0 +1,22 @@
+id: "scenario_05_disk_sector_reader"
+name: "Disk Sector Read & Boot Sector Parser"
+description: "Program MMIO Block Device controller to read Sector 0 into RAM buffer at 0x80005000 and verify boot signature 0xAA55."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "memory_contains"
+    address: 0x800051fe
+    expected_bytes: [0x55, 0xaa]
+    description: "Boot signature 0xAA55 present at offset 510 of loaded sector (0x800051FE)"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

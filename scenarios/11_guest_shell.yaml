@@ -1,0 +1,24 @@
+id: "scenario_11_guest_shell"
+name: "Interactive Guest OS Shell"
+description: "Process command input over UART terminal and respond with shell command execution (help, echo, memdump, ps)."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "uart_output_contains"
+    expected: "MEL-SHELL>"
+    description: "Interactive shell prompt displayed on UART"
+  - type: "uart_output_contains"
+    expected: "HELLO MEL"
+    description: "Command output for 'echo HELLO MEL' verified"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

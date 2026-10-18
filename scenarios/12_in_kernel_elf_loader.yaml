@@ -1,0 +1,26 @@
+id: "scenario_12_in_kernel_elf_loader"
+name: "In-Kernel ELF Executable Loader"
+description: "Parse ELF64 executable headers, map LOAD segments into process address space, and transfer execution control."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 100
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "memory_contains"
+    address: 0x80010000
+    expected_bytes: [0x13, 0x05, 0xd0, 0x04] # addi a0, zero, 77
+    description: "User ELF code segment loaded into target address 0x80010000"
+  - type: "register_equals"
+    register: "a0"
+    value: 77
+    description: "User process completed with return code 77 in a0"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000

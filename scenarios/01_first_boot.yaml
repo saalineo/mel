@@ -1,0 +1,22 @@
+id: "scenario_01_first_boot"
+name: "First Boot & Stack Setup"
+description: "Initialize stack pointer sp to 0x80010000 and halt cleanly."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 20
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "register_equals"
+    register: "sp"
+    value: 0x80010000
+    description: "Stack pointer initialized to 0x80010000"
+  - type: "no_traps"
+    description: "No unhandled exceptions or traps"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 100

@@ -1,0 +1,27 @@
+id: "scenario_03_timer_tick"
+name: "CLINT Timer Configuration & Trap Handling"
+description: "Configure CLINT timer interrupts and handle timer trap vector dispatch."
+architecture: "riscv64"
+machine_profile: "riscv64-virt"
+timeout_cycles: 50
+initial_pc: 0x80000000
+provided_tools:
+  - "riscv64-unknown-elf-gcc"
+  - "debugger"
+objectives:
+  - type: "register_equals"
+    register: "mtvec"
+    value: 0x80001000
+    description: "mtvec set to trap handler address 0x80001000"
+  - type: "register_equals"
+    register: "mcause"
+    value: 0x8000000000000007
+    description: "mcause contains Machine Timer Interrupt cause (0x8000000000000007)"
+  - type: "program_counter_equals"
+    address: 0x80001000
+    description: "Program counter redirected to trap handler at 0x80001000"
+constraints:
+  - type: "max_binary_size"
+    bytes: 4096
+  - type: "max_execution_cycles"
+    cycles: 1000
