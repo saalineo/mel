@@ -1,6 +1,6 @@
 use mel_core::Architecture;
 use mel_cpu::traits::CpuStepResult;
-use mel_vm::clock::{VirtualClock, DEFAULT_FREQUENCY_HZ};
+use mel_vm::clock::{DEFAULT_FREQUENCY_HZ, VirtualClock};
 use mel_vm::factory::build_vm_for_arch;
 
 #[test]

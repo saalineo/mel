@@ -1,6 +1,6 @@
 //! Simulation Performance Benchmarking Suite.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use mel_core::Architecture;
 use mel_vm::create_basic_riscv64_vm;
 use mel_vm::factory::build_vm_for_arch;

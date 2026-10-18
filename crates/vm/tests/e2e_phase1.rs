@@ -7,7 +7,7 @@ use mel_core::RegisterId;
 use mel_cpu::traits::CpuStepResult;
 use mel_debugger::{DebugStopReason, Debugger, WatchpointKind};
 use mel_loader::load_raw_binary_from_file;
-use mel_vm::{create_basic_riscv64_vm, VirtualMachine};
+use mel_vm::{VirtualMachine, create_basic_riscv64_vm};
 
 fn get_boot_bin_path() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

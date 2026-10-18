@@ -4,8 +4,8 @@ use mel_core::{Architecture, MelError, RegisterId};
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{MockCpu, Riscv64Cpu};
 use mel_devices::{
-    BlockDevice, BootRom, Clint, MmioDevice, Plic, SharedMmioBusAdapter, Uart16550, BLOCK0_IRQ,
-    BLOCK_BASE, BLOCK_SIZE, CLINT_BASE, CLINT_SIZE, PLIC_BASE, PLIC_SIZE, UART0_IRQ,
+    BLOCK_BASE, BLOCK_SIZE, BLOCK0_IRQ, BlockDevice, BootRom, CLINT_BASE, CLINT_SIZE, Clint,
+    MmioDevice, PLIC_BASE, PLIC_SIZE, Plic, SharedMmioBusAdapter, UART0_IRQ, Uart16550,
 };
 use mel_memory::Ram;
 use std::collections::HashMap;
@@ -128,34 +128,34 @@ impl VirtualMachine {
     /// Synchronize hardware interrupt lines across peripherals and CPU core.
     fn sync_interrupts(&mut self) {
         // 1. UART -> PLIC source 10
-        if let (Some(uart), Some(plic)) = (&self.uart, &self.plic) {
-            if let (Ok(u), Ok(mut p)) = (uart.lock(), plic.lock()) {
-                p.set_irq_source(UART0_IRQ, u.is_interrupting());
-            }
+        if let (Some(uart), Some(plic)) = (&self.uart, &self.plic)
+            && let (Ok(u), Ok(mut p)) = (uart.lock(), plic.lock())
+        {
+            p.set_irq_source(UART0_IRQ, u.is_interrupting());
         }
 
         // 2. CLINT -> CPU MTIP and MSIP
-        if let Some(clint) = &self.clint {
-            if let Ok(c) = clint.lock() {
-                self.cpu.set_timer_interrupt(c.is_timer_interrupt_pending());
-                self.cpu
-                    .set_software_interrupt(c.is_software_interrupt_pending());
-            }
+        if let Some(clint) = &self.clint
+            && let Ok(c) = clint.lock()
+        {
+            self.cpu.set_timer_interrupt(c.is_timer_interrupt_pending());
+            self.cpu
+                .set_software_interrupt(c.is_software_interrupt_pending());
         }
 
         // 3. PLIC -> CPU MEIP (Context 0: Hart 0 M-mode)
-        if let Some(plic) = &self.plic {
-            if let Ok(p) = plic.lock() {
-                self.cpu
-                    .set_external_interrupt(p.is_external_interrupt_pending(0));
-            }
+        if let Some(plic) = &self.plic
+            && let Ok(p) = plic.lock()
+        {
+            self.cpu
+                .set_external_interrupt(p.is_external_interrupt_pending(0));
         }
 
         // 4. Block Device -> PLIC source 1 (BLOCK0_IRQ)
-        if let (Some(block), Some(plic)) = (&self.block, &self.plic) {
-            if let (Ok(b), Ok(mut p)) = (block.lock(), plic.lock()) {
-                p.set_irq_source(BLOCK0_IRQ, b.is_interrupting());
-            }
+        if let (Some(block), Some(plic)) = (&self.block, &self.plic)
+            && let (Ok(b), Ok(mut p)) = (block.lock(), plic.lock())
+        {
+            p.set_irq_source(BLOCK0_IRQ, b.is_interrupting());
         }
     }
 
@@ -331,25 +331,25 @@ impl VirtualMachine {
         self.cpu.mem_write(snapshot.ram_base, &snapshot.ram_data)?;
 
         // Restore UART
-        if let (Some(uart_arc), Some(uart_data)) = (&self.uart, &snapshot.uart_state) {
-            if let Ok(mut uart_guard) = uart_arc.lock() {
-                uart_guard.load_state(uart_data)?;
-            }
+        if let (Some(uart_arc), Some(uart_data)) = (&self.uart, &snapshot.uart_state)
+            && let Ok(mut uart_guard) = uart_arc.lock()
+        {
+            uart_guard.load_state(uart_data)?;
         }
 
         // Restore Boot ROM
-        if let (Some(rom_arc), Some(rom_data)) = (&self.rom, &snapshot.rom_state) {
-            if let Ok(mut rom_guard) = rom_arc.lock() {
-                rom_guard.load_state(rom_data)?;
-            }
+        if let (Some(rom_arc), Some(rom_data)) = (&self.rom, &snapshot.rom_state)
+            && let Ok(mut rom_guard) = rom_arc.lock()
+        {
+            rom_guard.load_state(rom_data)?;
         }
 
         // Restore auxiliary devices
         for dev_arc in &self.devices {
-            if let Ok(mut dev_guard) = dev_arc.lock() {
-                if let Some(dev_data) = snapshot.devices.get(dev_guard.name()) {
-                    dev_guard.load_state(dev_data)?;
-                }
+            if let Ok(mut dev_guard) = dev_arc.lock()
+                && let Some(dev_data) = snapshot.devices.get(dev_guard.name())
+            {
+                dev_guard.load_state(dev_data)?;
             }
         }
 

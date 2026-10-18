@@ -163,10 +163,10 @@ pub fn build_vm_from_profile(profile: &MachineProfile) -> MelResult<VirtualMachi
             cpu.mem_map(ram_base, ram_size, Prot::ALL)?;
             if let Some(rom_cfg) = &profile.boot.rom {
                 cpu.mem_map(rom_cfg.base, rom_cfg.size, Prot::ALL)?;
-                if let Some(rom_arc) = &rom {
-                    if let Ok(r) = rom_arc.lock() {
-                        cpu.mem_write(rom_cfg.base, r.as_slice())?;
-                    }
+                if let Some(rom_arc) = &rom
+                    && let Ok(r) = rom_arc.lock()
+                {
+                    cpu.mem_write(rom_cfg.base, r.as_slice())?;
                 }
             }
             for region in &profile.custom_memory_regions {
@@ -182,10 +182,10 @@ pub fn build_vm_from_profile(profile: &MachineProfile) -> MelResult<VirtualMachi
             cpu.mem_map(ram_base, ram_size as usize, Prot::ALL)?;
             if let Some(rom_cfg) = &profile.boot.rom {
                 cpu.mem_map(rom_cfg.base, rom_cfg.size as usize, Prot::ALL)?;
-                if let Some(rom_arc) = &rom {
-                    if let Ok(r) = rom_arc.lock() {
-                        cpu.mem_write(rom_cfg.base, r.as_slice())?;
-                    }
+                if let Some(rom_arc) = &rom
+                    && let Ok(r) = rom_arc.lock()
+                {
+                    cpu.mem_write(rom_cfg.base, r.as_slice())?;
                 }
             }
             for region in &profile.custom_memory_regions {
@@ -201,10 +201,10 @@ pub fn build_vm_from_profile(profile: &MachineProfile) -> MelResult<VirtualMachi
             cpu.mem_map(ram_base, ram_size as usize, Prot::ALL)?;
             if let Some(rom_cfg) = &profile.boot.rom {
                 cpu.mem_map(rom_cfg.base, rom_cfg.size as usize, Prot::ALL)?;
-                if let Some(rom_arc) = &rom {
-                    if let Ok(r) = rom_arc.lock() {
-                        cpu.mem_write(rom_cfg.base, r.as_slice())?;
-                    }
+                if let Some(rom_arc) = &rom
+                    && let Ok(r) = rom_arc.lock()
+                {
+                    cpu.mem_write(rom_cfg.base, r.as_slice())?;
                 }
             }
             for region in &profile.custom_memory_regions {
@@ -220,10 +220,10 @@ pub fn build_vm_from_profile(profile: &MachineProfile) -> MelResult<VirtualMachi
             cpu.mem_map(ram_base, ram_size as usize, Prot::ALL)?;
             if let Some(rom_cfg) = &profile.boot.rom {
                 cpu.mem_map(rom_cfg.base, rom_cfg.size as usize, Prot::ALL)?;
-                if let Some(rom_arc) = &rom {
-                    if let Ok(r) = rom_arc.lock() {
-                        cpu.mem_write(rom_cfg.base, r.as_slice())?;
-                    }
+                if let Some(rom_arc) = &rom
+                    && let Ok(r) = rom_arc.lock()
+                {
+                    cpu.mem_write(rom_cfg.base, r.as_slice())?;
                 }
             }
             for region in &profile.custom_memory_regions {
