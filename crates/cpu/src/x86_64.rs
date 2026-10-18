@@ -91,10 +91,10 @@ impl X86_64Cpu {
         // Port IN hook (Port -> CPU)
         let bus_in = bus;
         uc.add_insn_in_hook(move |_uc, port, size| -> u32 {
-            if let Ok(b) = bus_in.lock() {
-                if let Ok(val) = b.read(port as u64, size, Endianness::Little) {
-                    return val as u32;
-                }
+            if let Ok(b) = bus_in.lock()
+                && let Ok(val) = b.read(port as u64, size, Endianness::Little)
+            {
+                return val as u32;
             }
             0xFFFFFFFF
         })

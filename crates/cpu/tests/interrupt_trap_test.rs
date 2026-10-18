@@ -3,8 +3,8 @@
 use mel_core::RegisterId;
 use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::{
-    Riscv64Cpu, MCAUSE_INTERRUPT_BIT, MCAUSE_MEI, MCAUSE_MSI, MCAUSE_MTI, MIE_MEIE, MIE_MSIE,
-    MIE_MTIE, MSTATUS_MIE, MSTATUS_MPIE,
+    MCAUSE_INTERRUPT_BIT, MCAUSE_MEI, MCAUSE_MSI, MCAUSE_MTI, MIE_MEIE, MIE_MSIE, MIE_MTIE,
+    MSTATUS_MIE, MSTATUS_MPIE, Riscv64Cpu,
 };
 use unicorn_engine::unicorn_const::Prot;
 

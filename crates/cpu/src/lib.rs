@@ -11,13 +11,13 @@ pub mod traits;
 pub mod x86_64;
 
 pub use arm64::Arm64Cpu;
-pub use hook::{register_bus_hooks, CpuBusBridge};
+pub use hook::{CpuBusBridge, register_bus_hooks};
 pub use mock::MockCpu;
 pub use powerpc64::PowerIso64Cpu;
 pub use riscv64::{
-    Riscv64Cpu, MCAUSE_INTERRUPT_BIT, MCAUSE_MEI, MCAUSE_MSI, MCAUSE_MTI, MIE_MEIE, MIE_MSIE,
-    MIE_MTIE, MIP_MEIP, MIP_MSIP, MIP_MTIP, MSTATUS_MIE, MSTATUS_MPIE, MSTATUS_MPP_M,
-    MSTATUS_MPP_MASK,
+    MCAUSE_INTERRUPT_BIT, MCAUSE_MEI, MCAUSE_MSI, MCAUSE_MTI, MIE_MEIE, MIE_MSIE, MIE_MTIE,
+    MIP_MEIP, MIP_MSIP, MIP_MTIP, MSTATUS_MIE, MSTATUS_MPIE, MSTATUS_MPP_M, MSTATUS_MPP_MASK,
+    Riscv64Cpu,
 };
 pub use traits::{CpuBackend, CpuStepResult};
 pub use x86_64::X86_64Cpu;

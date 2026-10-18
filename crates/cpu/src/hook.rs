@@ -3,8 +3,8 @@
 use mel_bus::SystemBus;
 use mel_core::{Endianness, MelError};
 use std::sync::{Arc, Mutex};
-use unicorn_engine::unicorn_const::{HookType, Prot};
 use unicorn_engine::Unicorn;
+use unicorn_engine::unicorn_const::{HookType, Prot};
 
 /// Context managing CPU-to-Bus routing and hook registrations.
 #[derive(Clone)]

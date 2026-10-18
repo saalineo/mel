@@ -1,7 +1,7 @@
 use mel_bus::SystemBus;
 use mel_core::RegisterId;
-use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_cpu::Riscv64Cpu;
+use mel_cpu::traits::{CpuBackend, CpuStepResult};
 use mel_devices::{SharedMmioBusAdapter, Uart16550};
 use mel_memory::Ram;
 use std::sync::{Arc, Mutex};
