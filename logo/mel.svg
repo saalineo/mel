@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 200" width="100%" height="100%">
+  <title>MEL — Cybernetic Refraction Prism</title>
+  <rect width="460" height="200" rx="28" fill="#090508"/>
+  
+  <g transform="translate(95, 100)">
+    <!-- Refraction Hex Framework -->
+    <polygon points="0,-58 50.2,-29 50.2,29 0,58 -50.2,29 -50.2,-29" fill="none" stroke="#FF5376" stroke-width="2"/>
+    
+    <!-- Facet 1: Left Wing (Incidence) -->
+    <polygon points="-44,35 -20,-40 -4,-12 -28,45" fill="#FF5376"/>
+    
+    <!-- Facet 2: Center Prism Core -->
+    <polygon points="-20,-40 0,-15 20,-40 4,-10 0,8 -4,-10" fill="#FFFFFF"/>
+    
+    <!-- Facet 3: Right Wing (Emergence) -->
+    <polygon points="44,35 20,-40 4,-12 28,45" fill="#FF5376"/>
+    
+    <!-- Focal Spark -->
+    <circle cx="0" cy="-15" r="4" fill="#FFFFFF"/>
+  </g>
+  
+  
+    <!-- Handcrafted Pure-Vector Lockup: MEL -->
+    <g transform="translate(205, 52)">
+      <!-- 'M' -->
+      <path d="M 0 64 L 0 0 L 16 0 L 34 36 L 52 0 L 68 0 L 68 64 L 52 64 L 52 20 L 38 48 L 30 48 L 16 20 L 16 64 Z" fill="#FFFFFF"/>
+      
+      <!-- 'E' -->
+      <path d="M 84 64 L 84 0 L 132 0 L 132 14 L 100 14 L 100 25 L 126 25 L 126 39 L 100 39 L 100 50 L 132 50 L 132 64 Z" fill="#FFFFFF"/>
+      
+      <!-- 'L' -->
+      <path d="M 148 64 L 148 0 L 164 0 L 164 50 L 196 50 L 196 64 Z" fill="#FFFFFF"/>
+      
+      <!-- Hardware Bus Interconnect Track -->
+      <path d="M 0 80 L 196 80 L 196 83 L 0 83 Z" fill="#FF5376"/>
+      
+      <!-- 4 Architecture Silicon Pins (RISC-V, ARM64, x86-64, PPC64) -->
+      <circle cx="8" cy="94" r="4" fill="#FFFFFF"/>
+      <circle cx="68" cy="94" r="4" fill="#FF5376"/>
+      <circle cx="128" cy="94" r="4" fill="#FFFFFF"/>
+      <circle cx="188" cy="94" r="4" fill="#FF5376"/>
+    </g>
+    
+</svg>
