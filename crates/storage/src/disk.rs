@@ -185,11 +185,11 @@ impl DiskImage {
         }
 
         // 1. Check COW overlay first
-        if self.cow_enabled {
-            if let Some(cow_sector) = self.cow_overlay.get(&sector) {
-                out_buf[..SECTOR_SIZE].copy_from_slice(cow_sector);
-                return Ok(());
-            }
+        if self.cow_enabled
+            && let Some(cow_sector) = self.cow_overlay.get(&sector)
+        {
+            out_buf[..SECTOR_SIZE].copy_from_slice(cow_sector);
+            return Ok(());
         }
 
         // 2. Read from base memory buffer
@@ -229,13 +229,13 @@ impl DiskImage {
             self.memory_base[offset..offset + SECTOR_SIZE].copy_from_slice(&sector_data);
 
             // If file-backed and not read-only, write through to file
-            if let Some(path) = &self.file_path {
-                if !self.read_only {
-                    let mut file = OpenOptions::new().write(true).open(path)?;
-                    file.seek(SeekFrom::Start(offset as u64))?;
-                    file.write_all(&sector_data)?;
-                    file.flush()?;
-                }
+            if let Some(path) = &self.file_path
+                && !self.read_only
+            {
+                let mut file = OpenOptions::new().write(true).open(path)?;
+                file.seek(SeekFrom::Start(offset as u64))?;
+                file.write_all(&sector_data)?;
+                file.flush()?;
             }
         }
 
@@ -290,13 +290,13 @@ impl DiskImage {
             let offset = (sector as usize) * SECTOR_SIZE;
             self.memory_base[offset..offset + SECTOR_SIZE].copy_from_slice(data);
 
-            if let Some(path) = &self.file_path {
-                if !self.read_only {
-                    let mut file = OpenOptions::new().write(true).open(path)?;
-                    file.seek(SeekFrom::Start(offset as u64))?;
-                    file.write_all(data)?;
-                    file.flush()?;
-                }
+            if let Some(path) = &self.file_path
+                && !self.read_only
+            {
+                let mut file = OpenOptions::new().write(true).open(path)?;
+                file.seek(SeekFrom::Start(offset as u64))?;
+                file.write_all(data)?;
+                file.flush()?;
             }
         }
 
