@@ -1,4 +1,63 @@
+# Rust / Cargo build artifacts
 target/
-tasks/
-*.md
+**/*.rs.bk
+*.profraw
+*.profdata
 *.lock
+
+# Payload compilation / Assembly / C (examples & guest payloads)
+build/
+*.o
+*.obj
+*.elf
+*.a
+*.map
+*.d
+
+# Python & PyO3 native extension artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.dylib
+*.dll
+*.pyd
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+ENV/
+
+# MEL Emulation, Snapshots, Disks & Logs
+*.snapshot
+*.snap
+*.img
+*.raw
+*.iso
+*.log
+
+# Project-specific scratchpad
+tasks/
+
+# Environment variables & local secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

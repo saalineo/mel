@@ -1,0 +1,30 @@
+[package]
+name = "mel-vm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+mel-core.workspace = true
+mel-bus.workspace = true
+mel-cpu.workspace = true
+mel-memory.workspace = true
+mel-devices.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+unicorn-engine.workspace = true
+
+[dev-dependencies]
+mel-loader.workspace = true
+mel-debugger.workspace = true
+criterion = { workspace = true }
+
+[[bench]]
+name = "vm_performance"
+harness = false
+
+
+

@@ -1,37 +1,39 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/mel-core",
-    "crates/mel-memory",
-    "crates/mel-bus",
-    "crates/mel-cpu",
-    "crates/mel-devices",
-    "crates/mel-storage",
-    "crates/mel-loader",
-    "crates/mel-debugger",
-    "crates/mel-scenarios",
-    "crates/mel-vm",
-    "crates/mel-cli",
+    "crates/core",
+    "crates/memory",
+    "crates/bus",
+    "crates/cpu",
+    "crates/devices",
+    "crates/storage",
+    "crates/loader",
+    "crates/debugger",
+    "crates/scenarios",
+    "crates/vm",
+    "crates/cli",
+    "crates/py",
 ]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["MEL Contributors"]
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/example/mel"
 
 [workspace.dependencies]
-mel-core = { path = "crates/mel-core" }
-mel-memory = { path = "crates/mel-memory" }
-mel-bus = { path = "crates/mel-bus" }
-mel-cpu = { path = "crates/mel-cpu" }
-mel-devices = { path = "crates/mel-devices" }
-mel-storage = { path = "crates/mel-storage" }
-mel-loader = { path = "crates/mel-loader" }
-mel-debugger = { path = "crates/mel-debugger" }
-mel-scenarios = { path = "crates/mel-scenarios" }
-mel-vm = { path = "crates/mel-vm" }
+mel-core = { path = "crates/core" }
+mel-memory = { path = "crates/memory" }
+mel-bus = { path = "crates/bus" }
+mel-cpu = { path = "crates/cpu" }
+mel-devices = { path = "crates/devices" }
+mel-storage = { path = "crates/storage" }
+mel-loader = { path = "crates/loader" }
+mel-debugger = { path = "crates/debugger" }
+mel-scenarios = { path = "crates/scenarios" }
+mel-vm = { path = "crates/vm" }
+mel-py = { path = "crates/py" }
 
 # Shared external dependencies
 thiserror = "1.0"
@@ -49,4 +51,6 @@ object = { version = "0.36", default-features = false, features = ["read", "writ
 ratatui = "0.28"
 crossterm = "0.28"
 vte = "0.13"
+pyo3 = { version = "0.22" }
+criterion = "0.5"
 

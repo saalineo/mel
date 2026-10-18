@@ -1,0 +1,31 @@
+[package]
+name = "mel-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "mel_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mel"
+path = "src/main.rs"
+
+[dependencies]
+mel-core.workspace = true
+mel-vm.workspace = true
+mel-loader.workspace = true
+mel-debugger.workspace = true
+mel-scenarios.workspace = true
+mel-devices.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+ratatui.workspace = true
+crossterm.workspace = true
+vte.workspace = true
+serde_yaml.workspace = true
+serde.workspace = true
